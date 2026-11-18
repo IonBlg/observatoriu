@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observatoriu — o seară prin Sistemul Solar</title>
+<meta name="description" content="Un planetariu demonstrativ, pe o singură pagină: derulezi de la apus până după miezul nopții și urmezi lumina Soarelui pe la Mercur, Venus, Pământ, Lună, Marte, Jupiter, Saturn, Uranus și Neptun.">
+<meta name="version" content="v12">
+<meta name="theme-color" content="#050409">
+<!-- adresa reală se completează la publicare (Etapa 4) -->
+<link rel="canonical" href="https://observatoriu.pages.dev/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ro_RO">
+<meta property="og:site_name" content="Observatoriu">
+<meta property="og:title" content="Observatoriu — o seară prin Sistemul Solar">
+<meta property="og:description" content="De la apus până după miezul nopții: urmăm lumina Soarelui pe la toate cele opt planete. Un planetariu demonstrativ.">
+<meta property="og:url" content="https://observatoriu.pages.dev/">
+<meta property="og:image" content="https://observatoriu.pages.dev/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Saturn cu inelele, pe cerul înstelat, și titlul Observatoriu">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
+<!--critic-->
+<style>
+@font-face{font-family:'Instrument Serif';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-serif-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Instrument Serif';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/instrument-serif-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Instrument Serif';font-style:italic;font-weight:400;font-display:swap;src:url(fonts/instrument-serif-latin-400-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Instrument Serif';font-style:italic;font-weight:400;font-display:swap;src:url(fonts/instrument-serif-latin-ext-400-italic.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Geist';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/geist-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Geist';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/geist-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Geist';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/geist-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Geist';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/geist-latin-ext-500-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/geist-mono-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/geist-mono-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/geist-mono-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/geist-mono-latin-ext-500-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+:root{--ink:#FFF1DD;--gold:#F2C48D;--bg:#050409}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:'Geist',system-ui,sans-serif;font-size:17px;line-height:1.6;overflow-x:clip}
+a{color:var(--gold);text-decoration:none}a:hover{color:#fff}
+.ser{font-family:'Instrument Serif',Georgia,serif;font-weight:400}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.nav{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(16px,3vw,40px);color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.nav a{color:#fff}
+.nav{transition:background .3s}.nav.solid{background:rgba(5,4,9,.97);text-shadow:none}
+.bar{position:fixed;left:0;top:0;height:2px;width:100%;z-index:31;background:rgba(255,241,221,.12)}
+.bar i{display:block;height:100%;background:var(--gold);transform-origin:0 50%;transform:scaleX(0)}
+.chap{position:fixed;left:clamp(4px,3vw - 12px,28px);top:50%;z-index:25;display:flex;flex-direction:column;padding:8px 8px 8px 12px;border-radius:10px;background:rgba(5,4,9,.74);transform:translateY(-50%);transition:opacity .4s,visibility .4s}
+.chap.off{opacity:0;visibility:hidden}
+.chap a{display:flex;align-items:center;gap:10px;min-height:44px;padding-right:10px;font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.08em;color:rgba(255,241,221,.58);text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 14px rgba(0,0,0,.7);transition:color .3s}
+.chap a:hover{color:var(--ink)}
+.chap a span{display:block;flex:none;width:8px;height:8px;border-radius:50%;border:1px solid currentColor;transition:background .3s,transform .3s}
+.chap a.on{color:#fff}.chap a.on span{background:var(--gold);border-color:var(--gold);transform:scale(1.4)}
+.chap a em{font-style:normal;display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transform:translateX(-6px);transition:opacity .35s,transform .35s,max-width .35s}
+.chap a.on em,.chap:hover a em,.chap:focus-within a em{max-width:12em;opacity:1;transform:none}
+.chap{background:transparent;transition:opacity .4s,visibility .4s,background .3s}
+.chap:hover,.chap:focus-within{background:rgba(5,4,9,.74)}
+.chap a.prog{margin-top:8px;position:relative;color:var(--gold)}.chap a.prog::before{content:'';position:absolute;left:0;top:0;width:10px;height:1px;background:rgba(255,241,221,.3);transition:width .35s}.chap:hover a.prog::before,.chap:focus-within a.prog::before{width:100%}.chap a.prog.on{color:#fff}
+section.pin{position:relative}
+.stage{position:sticky;top:0;height:100vh;min-height:560px;overflow:hidden;background:var(--bg)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;will-change:contents}
+.pnl{position:absolute;opacity:0;will-change:opacity,translate,scale;text-shadow:0 1px 3px rgba(0,0,0,.7),0 2px 24px rgba(0,0,0,.75);z-index:4;isolation:isolate}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.ltr{display:inline-block;will-change:transform,opacity}
+.cred{position:absolute;right:16px;bottom:12px;z-index:6;margin:0;padding:6px 12px;border-radius:5px;background:rgba(5,4,9,.72);font-size:13px;color:rgba(255,241,221,.9);text-shadow:none;transition:opacity .3s}
+.cred a{color:#FFF1DD;text-decoration:underline}
+#apus .cred{top:86px;bottom:auto}
+#calatorie .cred{right:auto;left:max(160px,9vw);max-width:calc(100vw - max(160px,9vw) - 400px)}
+.cred.away{opacity:0!important}
+.shade{position:absolute;inset:0;z-index:1;pointer-events:none}
+h1,h2,h3,.big,.quote,.kick{text-wrap:balance}
+p,.lead,li{text-wrap:pretty}
+.load{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:var(--bg);transition:opacity .9s ease,visibility .9s}
+.load.out{opacity:0;visibility:hidden}
+.load .orb{position:relative;width:132px;height:132px;transition:transform 1.1s cubic-bezier(.7,0,.2,1)}
+.load.out .orb{transform:scale(7)}
+.load svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.load .dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--gold);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(.7);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+.load h2{margin:0;font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;font-size:44px;line-height:1}
+.load p{margin:0;font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.12em;color:rgba(255,241,221,.88)}
+.load small{font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.06em;color:rgba(255,241,221,.86)}
+body.locked{overflow:hidden}
+@media (prefers-reduced-motion:reduce){.load .dot{animation:none}.load .orb{transition:none}}
+@media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}#apus .pnl.a1,#apus .pnl.a2{top:44vh!important;bottom:auto!important}#apus .pnl.a3{top:auto!important;bottom:12vh!important}}
+.snd{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.6);background:rgba(5,4,9,.18);color:#fff;font:500 14px 'Geist',system-ui,sans-serif;cursor:pointer;transition:background .3s,border-color .3s,color .3s}
+.snd svg{width:20px;height:20px;flex:none}
+.snd .on-i{display:none}.snd[aria-pressed="true"] .on-i{display:inline}.snd[aria-pressed="true"] .off-i{display:none}
+.snd:hover{background:rgba(255,241,221,.14)}
+.snd[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.snd.armed{border-color:var(--gold)}
+.snd:focus-visible,.nav a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.nav a.rez{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;background:var(--gold);color:#140E12;font-size:15px;font-weight:500;text-shadow:none;transition:background .3s}
+.nav a.rez:hover{background:#FFD9A8}
+.hud{position:fixed;right:clamp(16px,3vw,40px);bottom:24px;z-index:24;display:grid;gap:5px;min-width:270px;padding:12px 16px;background:rgba(10,8,14,.8);border:1px solid rgba(255,241,221,.2);border-radius:6px;opacity:0;visibility:hidden;transition:opacity .4s,visibility .4s;pointer-events:none;contain:layout paint}
+.hud.on{opacity:1;visibility:visible}
+.hud.on.lupa{opacity:0;visibility:hidden}
+.hud div{display:flex;justify-content:space-between;align-items:baseline;gap:18px}
+.hud span{font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.06em;color:rgba(255,241,221,.86)}
+.hud .hs{padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid rgba(255,241,221,.14)}
+.hud .hs b{font-size:14px;color:var(--gold)}
+.hud b{font-weight:500;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.loupe{position:fixed;left:0;top:0;z-index:26;width:180px;height:180px;margin:-90px 0 0 -90px;border-radius:50%;border:2px solid var(--gold);box-shadow:0 0 0 6px rgba(5,4,9,.55),0 10px 40px rgba(0,0,0,.6);pointer-events:none;opacity:0;transition:opacity .2s;will-change:transform,opacity}
+.loupe canvas{display:block;width:100%;height:100%;border-radius:50%}
+.loupe.on{opacity:1}
+.ltag{position:fixed;left:0;top:0;z-index:26;width:260px;margin-left:-130px;padding:10px 13px;background:rgba(10,8,14,.88);border:1px solid rgba(255,241,221,.22);border-radius:6px;font-size:13px;line-height:1.45;pointer-events:none;opacity:0;transition:opacity .2s;will-change:transform,opacity}
+.ltag b{display:block;margin-bottom:3px;font:500 13px 'Geist Mono',monospace;letter-spacing:.08em;color:var(--gold)}
+.ltag.on{opacity:1}
+.vh{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@media (max-width:760px){
+.nav{gap:10px;padding-top:12px;padding-bottom:12px}.nav-r{gap:10px!important}
+.snd{padding:0;width:44px;height:44px;justify-content:center}.snd svg{width:22px;height:22px}.snd .t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.nav a.rez{padding:0 16px}
+.hud{top:76px;bottom:auto;right:auto;left:50%;transform:translateX(-50%);min-width:0;display:flex;gap:8px;padding:5px 12px;border-radius:999px}
+.hud span,.hud .hl,.hud .hs{display:none}
+.hud div{display:block}
+.hud b{font-size:13px;font-family:'Geist Mono',monospace;font-weight:400}
+.hud .hd b::before{content:'· ';opacity:.6}
+}
+.pill-nav{display:none}
+@media (max-width:760px){
+.pill-nav{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));z-index:27;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 14px 0 18px;transform:translateX(-50%);border-radius:999px;border:1px solid rgba(255,241,221,.3);background:rgba(10,8,14,.9);color:var(--ink);font:500 15px 'Geist',system-ui,sans-serif;white-space:nowrap;cursor:pointer;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
+.pill-nav.on{opacity:1;visibility:visible}
+.pill-nav .n{font-family:'Geist Mono',monospace;font-size:13px;color:rgba(255,241,221,.88)}
+.pill-nav svg{width:14px;height:14px;color:var(--gold)}
+body.sheet-open .hud{visibility:hidden}
+}
+body.sheet-open{overflow:hidden}
+.sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(3,2,6,.62);opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
+.sheet-bg.open{opacity:1;visibility:visible}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-height:84vh;overflow:auto;overscroll-behavior:contain;padding:8px 16px calc(14px + env(safe-area-inset-bottom));background:#0F0C13;border-top:1px solid rgba(255,241,221,.22);border-radius:18px 18px 0 0;transform:translateY(102%);visibility:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),visibility .35s}
+.sheet.open{transform:none;visibility:visible;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.sheet .sh-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 6px 4px}
+.sheet h2{margin:0;font-size:30px;line-height:1}
+.sheet .sh-x{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,241,221,.3);background:transparent;color:var(--ink);cursor:pointer}
+.sheet ol{list-style:none;margin:6px 0 0;padding:0}
+.sheet a{display:flex;align-items:center;gap:14px;min-height:46px;padding:0 6px;border-bottom:1px solid rgba(255,241,221,.09);color:var(--ink);font-size:17px}
+.sheet a .k{width:26px;font-family:'Geist Mono',monospace;font-size:13px;color:rgba(255,241,221,.86)}
+.sheet a i{width:9px;height:9px;margin-left:auto;border-radius:50%;border:1px solid rgba(255,241,221,.5)}
+.sheet a[aria-current] {color:#fff}.sheet a[aria-current] i{background:var(--gold);border-color:var(--gold)}
+.sheet a.prog{margin-top:10px;border:0;border-radius:999px;justify-content:center;background:var(--gold);color:#140E12;font-weight:500}
+.skip{position:fixed;left:16px;top:-80px;z-index:70;padding:12px 18px;border-radius:999px;background:var(--gold);color:#140E12!important;font-weight:500;transition:top .2s}
+.skip:focus{top:12px}
+#main:focus{outline:none}
+#apus .lcp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block}
+#apus canvas{opacity:0}#apus canvas.on{opacity:1}
+</style>
+<!--/critic-->
+<noscript><link rel="stylesheet" href="css/style.css?v=2026111803"></noscript>
+<script type="module" src="js/main.js?v=2026111803"></script>
+</head>
+<body class="locked">
+<a class="skip" href="#main">Sari la conținut</a>
+<div class="load" id="load" role="status" aria-live="polite">
+<div class="orb" aria-hidden="true"><svg viewBox="0 0 132 132"><circle cx="66" cy="66" r="62" fill="none" stroke="rgba(255,241,221,.14)" stroke-width="1.5"/><circle id="arc" cx="66" cy="66" r="62" fill="none" stroke="#F2C48D" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="389.6" stroke-dashoffset="389.6"/></svg><span class="dot"></span></div>
+<h2>Observatoriu</h2>
+<p id="ltext">PREGĂTIM CERUL · <span id="pct">0</span>%</p>
+<small>Apus · Soarele · opt planete · Luna — 10 hărți și <span id="nfr">70</span> de fotografii</small>
+</div>
+
+<nav class="nav" aria-label="Meniu">
+<a href="#apus" style="display:flex;align-items:center;gap:10px" aria-label="Observatoriu, începutul paginii">
+<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12.5" fill="none" stroke="#fff" stroke-width="1.2"/><circle cx="14" cy="14" r="3" fill="#fff"/></svg>
+<span class="ser" style="font-size:24px;font-style:italic;line-height:1">Observatoriu</span></a>
+<div class="nav-r" style="display:flex;align-items:center;gap:22px">
+<span class="mono hide-sm" style="font-size:14px;letter-spacing:.06em" id="clock">19:12</span>
+<button class="snd" id="snd" type="button" aria-pressed="false" aria-label="Muzică"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><defs><mask id="sndCut"><rect width="20" height="20" fill="#fff"/><path d="M2.6 2.6l14.8 14.8" stroke="#000" stroke-width="4.2"/></mask></defs><g class="on-i"><path d="M2.8 7.4h2.9L10 3.8v12.4l-4.3-3.6H2.8z" fill="currentColor" stroke="none"/><path d="M12.9 7.3a3.9 3.9 0 0 1 0 5.4M15.3 5a7.1 7.1 0 0 1 0 10"/></g><g class="off-i"><path d="M2.8 7.4h2.9L10 3.8v12.4l-4.3-3.6H2.8z" fill="currentColor" stroke="none" mask="url(#sndCut)"/><path d="M2.6 2.6l14.8 14.8"/></g></svg><span class="t">Muzică</span></button>
+<a class="rez" href="#program">Rezervă</a></div>
+</nav>
+<div class="bar" aria-hidden="true"><i id="bar"></i></div>
+
+<nav class="chap off" aria-label="Capitole">
+<a href="#soare" data-sec="soare"><span></span><em>SOARELE</em></a>
+<a href="#mercur" data-sec="mercur"><span></span><em>MERCUR</em></a>
+<a href="#venus" data-sec="venus"><span></span><em>VENUS</em></a>
+<a href="#pamant" data-sec="pamant"><span></span><em>PĂMÂNTUL</em></a>
+<a href="#luna" data-sec="luna"><span></span><em>LUNA</em></a>
+<a href="#marte" data-sec="marte"><span></span><em>MARTE</em></a>
+<a href="#jupiter" data-sec="jupiter"><span></span><em>JUPITER</em></a>
+<a href="#saturn" data-sec="saturn"><span></span><em>SATURN</em></a>
+<a href="#uranus" data-sec="uranus"><span></span><em>URANUS</em></a>
+<a href="#neptun" data-sec="neptun"><span></span><em>NEPTUN</em></a>
+<a href="#final" data-sec="final"><span></span><em>FINAL</em></a>
+<a href="#program" data-sec="program" class="prog"><span></span><em>PROGRAM</em></a>
+</nav>
+
+<main id="main" tabindex="-1">
+<!-- 1. APUS -->
+<section id="apus" class="pin" data-seq="apus" style="height:420vh">
+<div class="stage">
+<picture><source media="(max-width:767px)" srcset="media/m/apus/f001.webp?v=14" width="1000" height="1500"><img class="lcp" src="media/d/apus/f001.webp?v=14" width="1920" height="1080" alt="" fetchpriority="high"></picture>
+<canvas aria-hidden="true"></canvas>
+<div class="shade" style="background:rgba(8,5,10,.16)"></div>
+<div id="title" style="position:absolute;z-index:3;left:0;right:0;bottom:9vh;text-align:center;pointer-events:none">
+<p id="titleKick" class="mono" style="margin:0 0 6px;font-size:13px;letter-spacing:.1em;text-shadow:0 1px 12px rgba(0,0,0,.4)">UN PLANETARIU · O SEARĂ PRIN SISTEMUL SOLAR</p>
+<h1 class="ser" aria-label="Observatoriu" style="margin:0;font-size:clamp(64px,15.5vw,260px);line-height:.82;font-style:italic;letter-spacing:-.03em;text-shadow:0 2px 40px rgba(0,0,0,.25)"><span class="ltr" aria-hidden="true">O</span><span class="ltr" aria-hidden="true">b</span><span class="ltr" aria-hidden="true">s</span><span class="ltr" aria-hidden="true">e</span><span class="ltr" aria-hidden="true">r</span><span class="ltr" aria-hidden="true">v</span><span class="ltr" aria-hidden="true">a</span><span class="ltr" aria-hidden="true">t</span><span class="ltr" aria-hidden="true">o</span><span class="ltr" aria-hidden="true">r</span><span class="ltr" aria-hidden="true">i</span><span class="ltr" aria-hidden="true">u</span></h1>
+</div>
+<p id="cue" class="mono" style="position:absolute;z-index:3;left:50%;bottom:3vh;transform:translateX(-50%);margin:0;padding:8px 16px;border-radius:999px;background:rgba(5,4,9,.6);font-size:13px;letter-spacing:.1em;white-space:nowrap">DERULEAZĂ — SOARELE APUNE ODATĂ CU TINE</p>
+<div class="pnl a1" data-a="0.06" data-b="0.32" style="top:15vh;left:clamp(16px,5vw,80px);max-width:480px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3vw,44px)">Apusul ăsta e fotografiat de pe Stația Spațială. Astronauții văd cam 16 apusuri pe zi. Lumina lui a plecat de la Soare acum 8 minute și 20 de secunde.</p></div>
+<div class="pnl a2" data-a="0.36" data-b="0.64" style="left:clamp(16px,5vw,80px);bottom:12vh;max-width:980px">
+<h2 class="ser big">Cerul nu e niciodată <em>la fel</em> de două ori.</h2></div>
+<div class="pnl a3" data-a="0.60" data-b="0.86" style="top:22vh;left:clamp(16px,5vw,80px);width:400px">
+<p class="ser" style="margin:0;font-size:34px;line-height:1.08">Vino la apus. Până după miezul nopții urmăm lumina Soarelui, până la marginea Sistemului Solar.</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px"><a class="btn btn-gold" href="#program">Rezervă o seară</a><a class="btn btn-ghost" href="#soare">Începe călătoria</a></div></div>
+<p class="cred mono">Fotografii: <a href="https://eol.jsc.nasa.gov/BeyondThePhotography/CrewEarthObservationsVideos/">NASA, Crew Earth Observations (ISS)</a> · domeniu public</p>
+</div></section>
+
+<!-- 2. CĂLĂTORIA: urmăm lumina, de la Soare spre exterior. Opririle, momentele și ancorele se calculează din lista STOPS. -->
+<section id="calatorie" class="pin" style="height:3600vh">
+<span id="soare" class="anchor"></span><span id="mercur" class="anchor"></span><span id="venus" class="anchor"></span><span id="pamant" class="anchor"></span><span id="luna" class="anchor"></span><span id="marte" class="anchor"></span><span id="jupiter" class="anchor"></span><span id="saturn" class="anchor"></span><span id="uranus" class="anchor"></span><span id="neptun" class="anchor"></span>
+<div class="stage">
+<div class="lens" style="position:absolute;inset:0"><canvas id="space" aria-hidden="true"></canvas></div>
+<div class="ring" aria-hidden="true"></div>
+
+<div class="pnl" data-free data-seg="ocular" style="left:50%;top:50%;width:360px;margin-left:-180px;margin-top:calc(17vmin + 22px);text-align:center"><p class="mono" style="margin:0;font-size:13px;letter-spacing:.1em">PRIVEȘTE PRIN OCULAR</p></div>
+
+<!-- SOARELE -->
+<div class="pnl" data-stop="soare" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — DE AICI A PLECAT LUMINA</p>
+<h2 class="ser big">Soarele. <em>Aici</em> începe drumul.</h2>
+<p class="lead">Lumina apusului pe care ai văzut-o a plecat de aici acum 8 minute și 20 de secunde. O urmăm, spre exterior.</p></div>
+<div class="pnl glass" data-stop="soare" data-at style="bottom:14vh;width:340px">
+<p class="kick">SOARELE</p>
+<div class="facts"><span>Diametru</span><span>1,39 mil. km</span><span>Cât</span><span>109 Pământuri</span><span>Masa</span><span>99,8% din tot Sistemul Solar</span><span>La suprafață</span><span>~5.500 °C</span></div></div>
+
+<!-- MERCUR -->
+<div class="pnl" data-stop="mercur" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN 3 MIN 13 S</p>
+<h2 class="ser big">Mercur, cel mai <em>aproape</em> de Soare.</h2>
+<p class="lead">Un an pe Mercur durează mai puțin decât o zi acolo.</p></div>
+<div class="pnl glass" data-stop="mercur" data-at style="bottom:max(14vh,160px);width:350px">
+<p class="kick">MERCUR</p>
+<div class="facts"><span>Diametru</span><span>4.879 km</span><span>Un an</span><span>88 de zile</span><span>O zi (răsărit → răsărit)</span><span>176 de zile</span><span>Ziua / noaptea</span><span>+430 °C / −180 °C</span></div></div>
+<div class="pnl" data-stop="mercur" data-at style="bottom:max(14vh,160px);max-width:480px">
+<p class="kick">ȘI TOTUȘI…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">Are gheață: în craterele de la poli, unde lumina Soarelui nu ajunge niciodată.</p></div>
+
+<!-- VENUS -->
+<div class="pnl" data-stop="venus" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN 6 MIN 1 S</p>
+<h2 class="ser big">Venus, cea mai <em>fierbinte</em> planetă.</h2>
+<p class="lead">Deși Mercur e mai aproape de Soare. Norii groși, din acid sulfuric, țin căldura ca sub un capac.</p></div>
+<div class="pnl glass" data-stop="venus" data-at style="bottom:14vh;width:350px">
+<p class="kick">VENUS</p>
+<div class="facts"><span>Diametru</span><span>12.104 km</span><span>O zi</span><span>243 de zile</span><span>Un an</span><span>225 de zile</span><span>La suprafață</span><span>~465 °C</span><span>Presiunea</span><span>~92 × cea de pe Pământ</span></div>
+<p style="margin:14px 0 0;font-size:14px;opacity:.85">Presiunea de acolo e ca la ~900 m sub apa oceanului.</p></div>
+<div class="pnl" data-stop="venus" data-at style="bottom:max(14vh,160px);max-width:480px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">O zi pe Venus e mai lungă decât anul ei. Și se rotește invers: Soarele răsare la vest.</p></div>
+
+<!-- PĂMÂNTUL -->
+<div class="pnl" data-stop="pamant" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — ACASĂ, DUPĂ ~8 MIN 20 S DE LUMINĂ</p>
+<h2 class="ser big">Pământul, văzut de <em>sus</em>.</h2>
+<p class="lead">Chiar acum te rotești odată cu el, fără să simți nimic. La ecuator, viteza e de aproape 1.700 km/h.</p></div>
+<div class="pnl glass" data-stop="pamant" data-at style="bottom:14vh;width:330px">
+<p class="kick">PĂMÂNTUL</p>
+<div class="facts"><span>Diametru</span><span>12.742 km</span><span>O rotație</span><span>24 de ore</span><span>Până la Lună</span><span>384.400 km</span><span>Lumina face drumul</span><span>în 1,3 secunde</span></div></div>
+<div class="pnl" data-free data-leg="luna" style="left:50%;bottom:max(10vh,150px);width:min(640px,88vw);margin-left:max(-320px,-44vw);text-align:center">
+<p class="kick">ÎNTRE PĂMÂNT ȘI LUNĂ</p>
+<p class="ser quote">Toate celelalte planete ale Sistemului Solar, puse una lângă alta, ar încăpea în spațiul ăsta.</p></div>
+
+<!-- LUNA: un glob ca celelalte (fără coborârea spre Tycho); lupa merge cât stăm la ea -->
+<div class="pnl" data-stop="luna" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LÂNGĂ PĂMÂNT</p>
+<h2 class="ser big">Luna, vecina <em>noastră</em>.</h2>
+<p class="lead">De pe Pământ vedem mereu aceeași față a ei. Cealaltă nu se vede niciodată de acasă.</p>
+<p class="hint"><span class="t-mouse">LUPĂ 3× · TRECI CU MOUSE-UL PESTE LUNĂ</span><span class="t-touch">LUPĂ 3× · ȚINE DEGETUL PE LUNĂ</span></p></div>
+<div class="pnl glass" data-stop="luna" data-at style="bottom:14vh;width:360px">
+<p class="kick">CRATERUL TYCHO</p>
+<div class="facts"><span>Lățime</span><span>85 km</span><span>Adâncime</span><span>4,7 km</span><span>Muntele din mijloc</span><span>1.600 m</span><span>Vârstă</span><span>~108 mil. ani</span></div>
+<p style="margin:14px 0 0;font-size:14px;opacity:.85">S-a format când pe Pământ încă trăiau dinozaurii. Îl vezi jos, cu razele luminoase.</p></div>
+<div class="pnl" data-stop="luna" data-at style="top:16vh;max-width:520px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">Urmele astronauților Apollo sunt încă acolo, neatinse. Pe Lună nu bate vântul să le șteargă.</p></div>
+<article class="pnl card ev tilt" data-stop="luna" data-at style="bottom:max(14vh,160px)">
+<p class="ev-d"><span>DUMINICĂ 18 OCT ·</span> <span>20:00 · 2 ORE</span></p>
+<h3>Luna la primul pătrar</h3>
+<p class="ev-p">Cea mai bună seară pentru cratere: la granița dintre zi și noapte, umbrele lor sunt cele mai lungi.</p>
+<div class="ev-f"><span class="ev-pr">120 lei</span><a class="btn btn-gold" href="#program" data-ev="patrar">Rezervă</a></div></article>
+<article class="pnl card ev tilt" data-stop="luna" data-at style="bottom:max(14vh,160px)">
+<p class="ev-d"><span>SÂMBĂTĂ 17 OCT ·</span> <span>17:00 · 45 MIN</span></p>
+<h3>Drumul spre Lună</h3>
+<p class="ev-p">Spectacol sub cupolă pentru copii de la 6 ani: cum au ajuns oamenii acolo și cum se doarme în rachetă.</p>
+<div class="ev-f"><span class="ev-pr">70 lei</span><a class="btn btn-gold" href="#program" data-ev="copii">Rezervă</a></div></article>
+<div class="pnl" data-stop="luna" data-at style="bottom:max(14vh,160px);max-width:500px">
+<p class="kick">ȘI ÎNCĂ CEVA…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">Luna se îndepărtează de noi cu 3,8 cm pe an, cam cât îți cresc unghiile.</p></div>
+
+<!-- MARTE -->
+<div class="pnl" data-stop="marte" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN ~12 MIN 40 S</p>
+<h2 class="ser big">Marte, planeta <em>roșie</em>.</h2>
+<p class="lead">Roșie de la rugină: praful de pe suprafață e plin de oxid de fier.</p></div>
+<div class="pnl glass" data-stop="marte" data-at style="bottom:14vh;width:350px">
+<p class="kick">MARTE</p>
+<div class="facts"><span>Diametru</span><span>6.779 km</span><span>O zi</span><span>24 h 39 min</span><span>Muntele Olympus</span><span>~22 km înălțime</span><span>Un mesaj radio</span><span>3 – 22 minute</span></div>
+<p style="margin:14px 0 0;font-size:14px;opacity:.85">Olympus Mons e de aproape 2,5 ori mai înalt decât Everestul.</p></div>
+<div class="pnl" data-stop="marte" data-at style="top:16vh;max-width:520px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote">Pe Marte, apusul e <em>albastru</em>.</p></div>
+<article class="pnl card ev tilt" data-stop="marte" data-at style="bottom:max(14vh,160px)">
+<p class="ev-d"><span>SÂMBĂTĂ 24 OCT ·</span> <span>19:00 · 50 MIN</span></p>
+<h3>Planeta roșie</h3>
+<p class="ev-p">Spectacol sub cupolă despre roboții care explorează Marte chiar acum.</p>
+<div class="ev-f"><span class="ev-pr">90 lei</span><a class="btn btn-gold" href="#program" data-ev="marte">Rezervă</a></div></article>
+
+<!-- JUPITER -->
+<div class="pnl" data-stop="jupiter" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN ~43 MIN</p>
+<h2 class="ser big">Jupiter, cea mai mare <em>planetă</em>.</h2>
+<p class="lead">Și cea mai grăbită: o zi aici durează doar ~9 h 56 min.</p></div>
+<div class="pnl glass" data-stop="jupiter" data-at style="bottom:14vh;width:350px">
+<p class="kick">JUPITER</p>
+<div class="facts"><span>Diametru</span><span>139.820 km</span><span>O zi</span><span>~9 h 56 min</span><span>Marea Pată Roșie</span><span>mai mare decât Pământul</span><span>Observată de</span><span>peste 150 de ani</span></div>
+<p style="margin:14px 0 0;font-size:14px;opacity:.85">Pata e o furtună uriașă, care se rotește de când o urmărim.</p></div>
+<div class="pnl" data-stop="jupiter" data-at style="bottom:max(14vh,160px);max-width:480px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">În Jupiter ar încăpea de peste 1.300 de ori Pământul.</p></div>
+
+<!-- SATURN -->
+<div class="pnl" data-stop="saturn" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN 1 H 19 MIN</p>
+<h2 class="ser big">Saturn și <em>inelele</em> lui.</h2>
+<p class="lead">Se întind pe sute de mii de kilometri, dar sunt groase de cele mai multe ori doar de ~10 m până la ~1 km.</p></div>
+<div class="pnl glass" data-stop="saturn" data-at style="bottom:14vh;width:350px">
+<p class="kick">SATURN</p>
+<div class="facts"><span>Diametru</span><span>116.460 km</span><span>O zi</span><span>~10 h 34 min</span><span>Inelele</span><span>gheață și rocă</span><span>Densitatea</span><span>mai mică decât a apei</span></div>
+<p style="margin:14px 0 0;font-size:14px;opacity:.85">Teoretic, într-un ocean destul de mare, Saturn ar pluti.</p></div>
+<div class="pnl" data-stop="saturn" data-at style="top:16vh;max-width:480px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">Golul întunecat din inele, diviziunea Cassini, e lat de aproape 4.800 km.</p></div>
+<article class="pnl card ev tilt" data-stop="saturn" data-at style="bottom:max(14vh,160px)">
+<p class="ev-d"><span>VINERI 23 OCT ·</span> <span>21:00 · 60 MIN</span></p>
+<h3>Inelele lui Saturn</h3>
+<p class="ev-p">Observare la telescopul mare: Saturn e pe cer seara, în octombrie.</p>
+<div class="ev-f"><span class="ev-pr">80 lei</span><a class="btn btn-gold" href="#program" data-ev="saturn">Rezervă</a></div></article>
+
+<!-- URANUS -->
+<div class="pnl" data-stop="uranus" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN 2 H 40 MIN</p>
+<h2 class="ser big">Uranus, planeta <em>culcată</em>.</h2>
+<p class="lead">Axa lui e înclinată la 97,8°: se rostogolește pe orbită ca o minge.</p></div>
+<div class="pnl glass" data-stop="uranus" data-at style="bottom:14vh;width:350px">
+<p class="kick">URANUS</p>
+<div class="facts"><span>Diametru</span><span>50.724 km</span><span>Un an</span><span>84 de ani</span><span>La fiecare pol</span><span>~42 de ani de zi, ~42 de noapte</span><span>Descoperit</span><span>1781, W. Herschel</span></div></div>
+<div class="pnl" data-stop="uranus" data-at style="bottom:max(14vh,160px);max-width:480px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">E prima planetă găsită cu telescopul. Toate celelalte de până la el se văd cu ochiul liber.</p></div>
+
+<!-- NEPTUN -->
+<div class="pnl" data-stop="neptun" data-at style="top:16vh;max-width:560px">
+<p class="kick"><span class="tm"></span> — LUMINA AJUNGE AICI ÎN 4 H 10 MIN</p>
+<h2 class="ser big">Neptun, la marginea <em>drumului</em>.</h2>
+<p class="lead">Aici bat cele mai puternice vânturi din Sistemul Solar: ~2.000 km/h.</p></div>
+<div class="pnl glass" data-stop="neptun" data-at style="bottom:14vh;width:350px">
+<p class="kick">NEPTUN</p>
+<div class="facts"><span>Diametru</span><span>49.244 km</span><span>Un an</span><span>165 de ani</span><span>Descoperit</span><span>1846</span><span>Prima orbită completă</span><span>în 2011</span></div>
+<p style="margin:14px 0 0;font-size:14px;opacity:.85">De la descoperire până azi, Neptun a făcut un singur ocol al Soarelui.</p></div>
+<div class="pnl" data-stop="neptun" data-at style="bottom:max(14vh,160px);max-width:480px">
+<p class="kick">ȘTIAI CĂ…</p>
+<p class="ser quote" style="font-size:clamp(28px,3.2vw,46px)">Albastrul intens din pozele Voyager era exagerat. Neptun e doar puțin mai albastru decât Uranus.</p></div>
+
+<p class="cred mono" id="cred-render" style="opacity:0"><span id="cred-render-t"></span></p>
+</div></section>
+
+<aside class="hud" id="hud" aria-label="Contor de călătorie">
+<div class="hs"><b id="hStop">Oprirea 1 din 11</b></div>
+<div><span>DISTANȚĂ DE LA SOARE</span><b id="hKm">0 km</b></div>
+<div class="hl"><span>LUMINA A AJUNS AICI ÎN</span><b id="hLight">0 s</b></div>
+<div class="hd"><span>DESTINAȚIE</span><b id="hDest">Soarele</b></div>
+</aside>
+<div class="loupe" id="loupe" aria-hidden="true"><canvas></canvas></div>
+<div class="ltag" id="ltag" aria-hidden="true"><b></b><span></span></div>
+<button class="pill-nav" id="pillNav" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="sheet"><span class="t" id="pillT">Soarele</span><span class="n" id="pillN">1/11</span><span class="vh">, lista opririlor</span><svg viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9l4.5-4.5L11.5 9"/></svg></button>
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetT">
+<div class="sh-top"><h2 id="sheetT" class="ser">Opririle drumului</h2><button class="sh-x" id="sheetX" type="button" aria-label="Închide lista"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></div>
+<ol id="sheetList"></ol>
+<a class="prog" href="#program">Program și rezervări</a>
+</div>
+
+<!-- 7. FINAL: cerul din seara asta, Orionidele, programul cu rezervarea, apoi „Ne vedem sub stele.” -->
+<section id="final" aria-labelledby="h-final">
+<div class="fin-bg" aria-hidden="true"><div class="stick">
+<video id="vid" muted loop playsinline preload="none"></video>
+<div style="position:absolute;inset:0;background:rgba(5,4,9,.35)"></div></div></div>
+<div class="fin-in">
+<article class="sky" id="sky" aria-labelledby="h-sky">
+<p class="kick" id="skyDate">CHIȘINĂU · ORA 21:00</p>
+<h3 id="h-sky" class="ser" style="margin:0;font-size:clamp(32px,3.4vw,40px);line-height:1">Cerul din seara asta, deasupra Chișinăului</h3>
+<div class="ph"><canvas id="phaseCv" width="168" height="168" aria-hidden="true"></canvas><div><span class="pn" id="phaseName">Se calculează…</span><span class="pi" id="phaseInfo">&nbsp;</span></div></div>
+<div id="planetRows"><div class="row"><span>Luna</span><div class="alt" aria-hidden="true"><i style="width:0%"></i></div><span class="pill">…</span></div><div class="row"><span>Mercur</span><div class="alt" aria-hidden="true"><i style="width:0%"></i></div><span class="pill">…</span></div><div class="row"><span>Venus</span><div class="alt" aria-hidden="true"><i style="width:0%"></i></div><span class="pill">…</span></div><div class="row"><span>Marte</span><div class="alt" aria-hidden="true"><i style="width:0%"></i></div><span class="pill">…</span></div><div class="row"><span>Jupiter</span><div class="alt" aria-hidden="true"><i style="width:0%"></i></div><span class="pill">…</span></div><div class="row"><span>Saturn</span><div class="alt" aria-hidden="true"><i style="width:0%"></i></div><span class="pill">…</span></div></div><!-- rândurile se completează din sky.js; înălțimea cardului e aceeași de la început -->
+</article>
+
+
+<section id="program" aria-labelledby="h-prog">
+<div class="pg-l">
+<h2 id="h-prog" class="ser" tabindex="-1">Program</h2>
+<p class="sub">Cinci seri în octombrie. Apasă pe una ca s-o alegi: biletul de rezervare se completează singur.</p>
+<div class="loc" aria-labelledby="h-loc"><p class="kick" id="h-loc">FIȘA LOCULUI</p>
+<dl><div><dt>Cupolă</dt><dd>60 locuri</dd></div><div><dt>Telescop</dt><dd>300 mm</dd></div><div><dt>Seri</dt><dd>mar – dum</dd></div><div><dt>Intrare</dt><dd>de la 18:00</dd></div></dl></div>
+<ol class="evs" aria-label="Serile din program"><li><button type="button" class="row" data-pick="copii" aria-pressed="false"><span class="dt"><b>17</b><i>OCT</i><small>SÂMBĂTĂ</small></span><span class="tx"><span class="tm">17:00 · 45 min</span><span class="tt">Drumul spre Lună</span><span class="ds">Spectacol sub cupolă pentru copii de la 6 ani: cum au ajuns oamenii acolo și cum se doarme în rachetă.</span></span><span class="pr">70 lei<em>Alege</em></span></button></li><li><button type="button" class="row" data-pick="patrar" aria-pressed="false"><span class="dt"><b>18</b><i>OCT</i><small>DUMINICĂ</small></span><span class="tx"><span class="tm">20:00 · 2 ore</span><span class="tt">Luna la primul pătrar</span><span class="ds">Cea mai bună seară pentru cratere: la granița dintre zi și noapte, umbrele lor sunt cele mai lungi.</span></span><span class="pr">120 lei<em>Alege</em></span></button></li><li><button type="button" class="row" data-pick="orionide" aria-pressed="false"><span class="dt"><b>21</b><i>OCT</i><small>NOAPTEA SPRE 22</small></span><span class="tx"><span class="tm">după 03:00</span><span class="tt">Ploaia de stele Orionide</span><span class="ds">Între 15 și 25 de stele căzătoare pe oră: praf lăsat în urmă de cometa Halley.</span></span><span class="pr">90 lei<em>Alege</em></span></button></li><li><button type="button" class="row" data-pick="saturn" aria-pressed="false"><span class="dt"><b>23</b><i>OCT</i><small>VINERI</small></span><span class="tx"><span class="tm">21:00 · 60 min</span><span class="tt">Inelele lui Saturn</span><span class="ds">Observare la telescopul mare: Saturn e pe cer seara, în octombrie.</span></span><span class="pr">80 lei<em>Alege</em></span></button></li><li><button type="button" class="row" data-pick="marte" aria-pressed="false"><span class="dt"><b>24</b><i>OCT</i><small>SÂMBĂTĂ</small></span><span class="tx"><span class="tm">19:00 · 50 min</span><span class="tt">Planeta roșie</span><span class="ds">Spectacol sub cupolă despre roboții care explorează Marte chiar acum.</span></span><span class="pr">90 lei<em>Alege</em></span></button></li></ol>
+</div>
+<div class="rz">
+<p class="tk-k">BILET · OBSERVATORIU</p>
+<h3 id="h-form" class="ser">Rezervă un loc</h3>
+<div class="tk" id="tk" aria-live="polite"><span class="tk-e" id="tkE">Alege o seară din program</span><span class="tk-t" id="tkT"></span></div>
+<form id="rez" novalidate aria-labelledby="h-form">
+<div class="fld w2"><label for="f-ev">Evenimentul</label>
+<select id="f-ev" name="ev" required aria-describedby="e-ev"><option value="">Alege o seară</option>
+<option value="copii">Drumul spre Lună · sâmbătă 17 oct, 17:00 · 70 lei</option>
+<option value="patrar">Luna la primul pătrar · duminică 18 oct, 20:00 · 120 lei</option>
+<option value="orionide">Ploaia de stele Orionide · noaptea 21 spre 22 oct · 90 lei</option>
+<option value="saturn">Inelele lui Saturn · vineri 23 oct, 21:00 · 80 lei</option>
+<option value="marte">Planeta roșie · sâmbătă 24 oct, 19:00 · 90 lei</option></select>
+<p class="err" id="e-ev"></p></div>
+<div class="fld"><label for="f-nume">Numele tău</label><input id="f-nume" name="nume" type="text" autocomplete="name" required aria-describedby="e-nume"><p class="err" id="e-nume"></p></div>
+<div class="fld"><label for="f-tel">Telefon</label><input id="f-tel" name="tel" type="tel" autocomplete="tel" inputmode="tel" required aria-describedby="e-tel"><p class="err" id="e-tel"></p></div>
+<div class="fld"><label for="f-n">Câte persoane</label>
+<select id="f-n" name="persoane"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></div>
+<button class="btn btn-gold go" type="submit" id="goBtn">Trimite rezervarea</button>
+</form>
+<p class="rz-ok" id="rezOk" role="status" aria-live="polite" tabindex="-1"></p>
+<button class="btn btn-ghost again" id="rezAgain" type="button" hidden>Fă încă o rezervare</button>
+</div>
+</section>
+
+<div class="fin-end" style="text-align:center;margin-top:96px">
+<p class="kick" style="font-size:13px">02:00 — STELE CĂZĂTOARE</p>
+<h2 id="h-final" class="ser" style="margin:0 auto;font-size:clamp(64px,10vw,180px);line-height:.86;font-style:italic;letter-spacing:-.03em">Ne vedem sub stele.</h2>
+</div>
+<div style="margin-top:34px;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center">
+<a class="btn btn-gold" href="#program">Alege o seară</a>
+<p class="mono" style="margin:0;font-size:13px;color:rgba(255,241,221,.88)">Video: <a href="https://www.eso.org/public/videos/Geminidstimelapse4/" style="text-decoration:underline">ESO/Gianluca Lombardi (glphoto.it)</a> · CC BY 4.0</p>
+</div></div></section>
+</main>
+
+<footer style="padding:28px clamp(16px,5vw,80px);display:flex;flex-wrap:wrap;gap:14px 28px;justify-content:space-between;border-top:1px solid rgba(255,241,221,.12)">
+<p class="mono" style="margin:0;font-size:13px;color:rgba(255,241,221,.88)">Observatoriu — site demonstrativ: planetariul, prețurile și evenimentele sunt fictive. Datele astronomice sunt reale.</p>
+<p class="mono" style="margin:0;font-size:13px;color:rgba(255,241,221,.88)">Imagini: ESO (G. Lombardi) și Hubble OPAL (NASA/ESA, A. Simon), CC BY 4.0 · Akatsuki (JAXA/ISAS), CC BY 4.0 · NASA/SDO, NASA Earth Observatory (Blue Marble), NASA SVS (CGI Moon Kit), MESSENGER, Viking, Cassini, Voyager, domeniu public. Apusul de început: fotografii NASA, Crew Earth Observations (ISS), domeniu public. Calcule astronomice: Astronomy Engine (MIT). Fonturi: Instrument Serif și Geist (SIL OFL 1.1).</p>
+<details>
+<summary>Surse imagini</summary>
+<ul>
+<li>Apusul de la început: 70 de fotografii time-lapse făcute de echipajul Expediției 30 de pe Stația Spațială Internațională, 13 aprilie 2012 (ISS030-E-235760 – 235829, „Sunset over China”), <a href="https://eol.jsc.nasa.gov/BeyondThePhotography/CrewEarthObservationsVideos/">NASA Crew Earth Observations</a>, domeniu public.</li>
+<li>Stelele căzătoare de la final: video <a href="https://www.eso.org/public/videos/Geminidstimelapse4/">ESO/Gianluca Lombardi (glphoto.it)</a>, CC BY 4.0.</li>
+<li>Soarele: o imagine <a href="https://sdo.gsfc.nasa.gov/">NASA/SDO</a> din 9 mai 2024 (HMI Intensitygram 4096², protuberanțele din AIA 304), prin <a href="https://helioviewer.org/">Helioviewer</a>, domeniu public.</li>
+<li>Mercur: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m">MESSENGER MDIS (NASA/JHUAPL/Carnegie)</a>, domeniu public.</li>
+<li>Venus: randat din imaginile <a href="https://doi.org/10.17597/isas.darts/vco-00016">Akatsuki UVI (JAXA/ISAS)</a>, CC BY 4.0.</li>
+<li>Pământul: randat din hărțile <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble Next Generation</a> (relief și batimetrie, iulie 2004) și Blue Marble: Clouds, NASA Earth Observatory, domeniu public.</li>
+<li>Luna: randată din harta color LROC a <a href="https://svs.gsfc.nasa.gov/4720">CGI Moon Kit (NASA's Scientific Visualization Studio)</a>, domeniu public.</li>
+<li>Marte: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m">Viking MDIM 2.1 (NASA/USGS)</a>, domeniu public.</li>
+<li>Jupiter: randat din harta <a href="https://photojournal.jpl.nasa.gov/catalog/PIA07782">Cassini PIA07782 (NASA/JPL/SSI)</a>, domeniu public.</li>
+<li>Saturn, Uranus, Neptun: randate din hărțile <a href="https://doi.org/10.17909/T9G593">Hubble OPAL (NASA/ESA/STScI, programul OPAL, PI A. Simon)</a>, CC BY 4.0.</li>
+<li>Inelele lui Saturn: profilul <a href="https://pds-rings.seti.org/">Voyager 2 PPS (NASA PDS Rings Node)</a> și culoarea din mozaicul <a href="https://photojournal.jpl.nasa.gov/catalog/PIA08389">Cassini PIA08389 (NASA/JPL/SSI)</a>, domeniu public.</li>
+<li>Calcule astronomice: <a href="https://github.com/cosinekitty/astronomy">Astronomy Engine</a> (MIT).</li>
+<li>Fonturi: <a href="https://github.com/Instrument/instrument-serif">Instrument Serif</a> și <a href="https://github.com/vercel/geist-font">Geist / Geist Mono</a>, SIL Open Font License 1.1.</li>
+<li>Modificări: cadre extrase, decupate, comprimate; Soarele, planetele și Luna randate live (WebGL) din hărți, cu culorile corectate. Fără legătură cu ESO, NASA sau JAXA.</li>
+</ul>
+</details>
+</footer>
+</body>
+</html>

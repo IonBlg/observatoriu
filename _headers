@@ -1,0 +1,13 @@
+# Cloudflare Pages: cadrele, video-ul și fonturile nu se schimbă (numele sau ?v= se schimbă la nevoie)
+/media/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# pagina se verifică la fiecare vizită
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate
