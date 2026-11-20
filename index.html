@@ -150,8 +150,8 @@ body.sheet-open{overflow:hidden}
 #apus canvas{opacity:0}#apus canvas.on{opacity:1}
 </style>
 <!--/critic-->
-<noscript><link rel="stylesheet" href="css/style.css?v=2026111803"></noscript>
-<script type="module" src="js/main.js?v=2026111803"></script>
+<noscript><link rel="stylesheet" href="css/style.css?v=2026112001"></noscript>
+<script type="module" src="js/main.js?v=2026112001"></script>
 </head>
 <body class="locked">
 <a class="skip" href="#main">Sari la conținut</a>
@@ -159,7 +159,7 @@ body.sheet-open{overflow:hidden}
 <div class="orb" aria-hidden="true"><svg viewBox="0 0 132 132"><circle cx="66" cy="66" r="62" fill="none" stroke="rgba(255,241,221,.14)" stroke-width="1.5"/><circle id="arc" cx="66" cy="66" r="62" fill="none" stroke="#F2C48D" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="389.6" stroke-dashoffset="389.6"/></svg><span class="dot"></span></div>
 <h2>Observatoriu</h2>
 <p id="ltext">PREGĂTIM CERUL · <span id="pct">0</span>%</p>
-<small>Apus · Soarele · opt planete · Luna — 10 hărți și <span id="nfr">70</span> de fotografii</small>
+<small>Apus · Soarele · opt planete · Luna — 11 hărți, desenate live</small>
 </div>
 
 <nav class="nav" aria-label="Meniu">
@@ -192,7 +192,7 @@ body.sheet-open{overflow:hidden}
 <!-- 1. APUS -->
 <section id="apus" class="pin" data-seq="apus" style="height:420vh">
 <div class="stage">
-<picture><source media="(max-width:767px)" srcset="media/m/apus/f001.webp?v=14" width="1000" height="1500"><img class="lcp" src="media/d/apus/f001.webp?v=14" width="1920" height="1080" alt="" fetchpriority="high"></picture>
+<picture><source media="(max-width:767px)" srcset="media/static/intro-m.webp?v=1" width="1000" height="1500"><img class="lcp" src="media/static/intro-d.webp?v=1" width="1920" height="1080" alt="" fetchpriority="high"></picture>
 <canvas aria-hidden="true"></canvas>
 <div class="shade" style="background:rgba(8,5,10,.16)"></div>
 <div id="title" style="position:absolute;z-index:3;left:0;right:0;bottom:9vh;text-align:center;pointer-events:none">
@@ -202,13 +202,13 @@ body.sheet-open{overflow:hidden}
 <p id="cue" class="mono" style="position:absolute;z-index:3;left:50%;bottom:3vh;transform:translateX(-50%);margin:0;padding:8px 16px;border-radius:999px;background:rgba(5,4,9,.6);font-size:13px;letter-spacing:.1em;white-space:nowrap">DERULEAZĂ — SOARELE APUNE ODATĂ CU TINE</p>
 <div class="pnl a1" data-a="0.06" data-b="0.32" style="top:15vh;left:clamp(16px,5vw,80px);max-width:480px">
 <p class="kick">ȘTIAI CĂ…</p>
-<p class="ser quote" style="font-size:clamp(28px,3vw,44px)">Apusul ăsta e fotografiat de pe Stația Spațială. Astronauții văd cam 16 apusuri pe zi. Lumina lui a plecat de la Soare acum 8 minute și 20 de secunde.</p></div>
+<p class="ser quote" style="font-size:clamp(28px,3vw,44px)">Așa arată un apus de pe orbită. Astronauții de pe Stația Spațială văd cam 16 apusuri pe zi. Lumina lui a plecat de la Soare acum 8 minute și 20 de secunde.</p></div>
 <div class="pnl a2" data-a="0.36" data-b="0.64" style="left:clamp(16px,5vw,80px);bottom:12vh;max-width:980px">
 <h2 class="ser big">Cerul nu e niciodată <em>la fel</em> de două ori.</h2></div>
 <div class="pnl a3" data-a="0.60" data-b="0.86" style="top:22vh;left:clamp(16px,5vw,80px);width:400px">
 <p class="ser" style="margin:0;font-size:34px;line-height:1.08">Vino la apus. Până după miezul nopții urmăm lumina Soarelui, până la marginea Sistemului Solar.</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px"><a class="btn btn-gold" href="#program">Rezervă o seară</a><a class="btn btn-ghost" href="#soare">Începe călătoria</a></div></div>
-<p class="cred mono">Fotografii: <a href="https://eol.jsc.nasa.gov/BeyondThePhotography/CrewEarthObservationsVideos/">NASA, Crew Earth Observations (ISS)</a> · domeniu public</p>
+<p class="cred mono">Pământul: randat din hărțile NASA <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble</a> și <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps/">Black Marble</a> · domeniu public</p>
 </div></section>
 
 <!-- 2. CĂLĂTORIA: urmăm lumina, de la Soare spre exterior. Opririle, momentele și ancorele se calculează din lista STOPS. -->
@@ -444,11 +444,11 @@ body.sheet-open{overflow:hidden}
 
 <footer style="padding:28px clamp(16px,5vw,80px);display:flex;flex-wrap:wrap;gap:14px 28px;justify-content:space-between;border-top:1px solid rgba(255,241,221,.12)">
 <p class="mono" style="margin:0;font-size:13px;color:rgba(255,241,221,.88)">Observatoriu — site demonstrativ: planetariul, prețurile și evenimentele sunt fictive. Datele astronomice sunt reale.</p>
-<p class="mono" style="margin:0;font-size:13px;color:rgba(255,241,221,.88)">Imagini: ESO (G. Lombardi) și Hubble OPAL (NASA/ESA, A. Simon), CC BY 4.0 · Akatsuki (JAXA/ISAS), CC BY 4.0 · NASA/SDO, NASA Earth Observatory (Blue Marble), NASA SVS (CGI Moon Kit), MESSENGER, Viking, Cassini, Voyager, domeniu public. Apusul de început: fotografii NASA, Crew Earth Observations (ISS), domeniu public. Calcule astronomice: Astronomy Engine (MIT). Fonturi: Instrument Serif și Geist (SIL OFL 1.1).</p>
+<p class="mono" style="margin:0;font-size:13px;color:rgba(255,241,221,.88)">Imagini: ESO (G. Lombardi) și Hubble OPAL (NASA/ESA, A. Simon), CC BY 4.0 · Akatsuki (JAXA/ISAS), CC BY 4.0 · NASA/SDO, NASA Earth Observatory (Blue Marble), NASA SVS (CGI Moon Kit), MESSENGER, Viking, Cassini, Voyager, domeniu public. Apusul de început: randat din hărțile NASA Blue Marble și Black Marble, domeniu public. Calcule astronomice: Astronomy Engine (MIT). Fonturi: Instrument Serif și Geist (SIL OFL 1.1).</p>
 <details>
 <summary>Surse imagini</summary>
 <ul>
-<li>Apusul de la început: 70 de fotografii time-lapse făcute de echipajul Expediției 30 de pe Stația Spațială Internațională, 13 aprilie 2012 (ISS030-E-235760 – 235829, „Sunset over China”), <a href="https://eol.jsc.nasa.gov/BeyondThePhotography/CrewEarthObservationsVideos/">NASA Crew Earth Observations</a>, domeniu public.</li>
+<li>Apusul de la început: randat live în WebGL (împrăștiere Rayleigh și Mie în atmosferă), din hărțile Blue Marble (ziua și norii) și <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps/">Black Marble 2016</a> (luminile orașelor, Suomi NPP VIIRS), NASA Earth Observatory, domeniu public. Camera stă la 400 km deasupra Mării Chinei de Est și privește spre Shanghai.</li>
 <li>Stelele căzătoare de la final: video <a href="https://www.eso.org/public/videos/Geminidstimelapse4/">ESO/Gianluca Lombardi (glphoto.it)</a>, CC BY 4.0.</li>
 <li>Soarele: o imagine <a href="https://sdo.gsfc.nasa.gov/">NASA/SDO</a> din 9 mai 2024 (HMI Intensitygram 4096², protuberanțele din AIA 304), prin <a href="https://helioviewer.org/">Helioviewer</a>, domeniu public.</li>
 <li>Mercur: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m">MESSENGER MDIS (NASA/JHUAPL/Carnegie)</a>, domeniu public.</li>

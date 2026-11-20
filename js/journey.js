@@ -1,6 +1,6 @@
 // Călătoria: scena 3D (STOPS), camera, regulile trecerii și desenarea (Soare, planete, inele, asteroizi, stele, Luna).
 // Copiată din previzualizare (V10), doar împărțită pe fișiere.
-import { dims } from './frames.js?v=2026111803';
+import { dims } from './frames.js?v=2026112001';
 
 export const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 

@@ -227,20 +227,30 @@ export function createGlobes(mobile) {
   let gl = null;
   try { gl = cv.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' }); } catch (e) {}
   if (!gl) return null;
-  const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
-  let prog;
-  try {
-    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-  } catch (e) { console.warn('[globuri] shaderul nu pornește, folosesc imaginile statice', e); return null; }
-  gl.useProgram(prog);
-  const U = {}; const n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(prog, i), nm = a.name.replace(/\[0\]$/, ''); U[nm] = gl.getUniformLocation(prog, a.name); }
-  ['uT0', 'uT1', 'uCl0', 'uCl1', 'uRing'].forEach((s, i) => U[s] && gl.uniform1i(U[s], i));
-  if (U.uThinR) gl.uniform2fv(U.uThinR, URANUS_RINGS.flat());
+  // compilarea nu blochează firul principal: starea se verifică abia la primul desen (KHR_parallel_shader_compile, dacă există)
+  const psc = gl.getExtension('KHR_parallel_shader_compile');
+  const vs = gl.createShader(gl.VERTEX_SHADER), fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(vs, VS); gl.compileShader(vs); gl.shaderSource(fs, FS); gl.compileShader(fs);
+  const prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  const U = {}; let progOk = 0;   // 0 = încă nu știm · 1 = merge · -1 = nu pornește
+  function progReady() {
+    if (progOk) return progOk > 0;
+    if (psc && !gl.getProgramParameter(prog, psc.COMPLETION_STATUS_KHR)) return false;
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      progOk = -1; lost = true;
+      console.warn('[globuri] shaderul nu pornește, folosesc imaginile statice', gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(prog));
+      return false;
+    }
+    progOk = 1; gl.useProgram(prog);
+    const n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(prog, i), nm = a.name.replace(/\[0\]$/, ''); U[nm] = gl.getUniformLocation(prog, a.name); }
+    ['uT0', 'uT1', 'uCl0', 'uCl1', 'uRing'].forEach((s, i) => U[s] && gl.uniform1i(U[s], i));
+    if (U.uThinR) gl.uniform2fv(U.uThinR, URANUS_RINGS.flat());
+    return true;
+  }
   gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.clearColor(0, 0, 0, 0);
   const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
-  const maxAniso = aniso ? Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 0;
+  const maxAnisoHW = aniso ? gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 0, maxAniso = Math.min(8, maxAnisoHW);
   const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   let lost = false;
   cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; console.warn('[globuri] contextul WebGL s-a pierdut: imaginile statice'); });
@@ -261,26 +271,27 @@ export function createGlobes(mobile) {
       gl.bindTexture(gl.TEXTURE_2D, j.tex);
       gl.pixelStorei(gl.UNPACK_SKIP_ROWS, j.y);
       const h = Math.min(j.strip, j.h - j.y);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, j.y, j.w, h, gl.RGBA, gl.UNSIGNED_BYTE, j.bm);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, j.y, j.w, h, j.fmt, gl.UNSIGNED_BYTE, j.bm);
       gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
       j.y += h;
       if (j.y >= j.h) { uploads.shift(); gl.generateMipmap(gl.TEXTURE_2D); j.bm.close && j.bm.close(); j.done(); }
     }
     if (uploads.length) { pumping = true; requestAnimationFrame(pump); }
   }
-  function makeTex(bm, wrapS, done) {
-    const w = bm.width, h = bm.height, tex = gl.createTexture();
+  // o: { red: textură cu un singur canal (R8, citește roșul), aniso: filtrarea anizotropă maximă }
+  function makeTex(bm, wrapS, done, o) {
+    const w = bm.width, h = bm.height, tex = gl.createTexture(), red = !!(o && o.red);
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texStorage2D(gl.TEXTURE_2D, Math.floor(Math.log2(Math.max(w, h))) + 1, gl.RGBA8, w, h);
+    gl.texStorage2D(gl.TEXTURE_2D, Math.floor(Math.log2(Math.max(w, h))) + 1, red ? gl.R8 : gl.RGBA8, w, h);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    if (maxAniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+    if (maxAniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, o && o.aniso ? Math.min(o.aniso, maxAnisoHW) : maxAniso);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
     // fâșii de ~4 MB: nicio încărcare lungă pe firul principal
-    uploads.push({ tex, bm, w, h, y: 0, strip: Math.max(16, Math.floor(1048576 / w)), done: () => done(tex) });
+    uploads.push({ tex, bm, w, h, y: 0, strip: Math.max(16, Math.floor(1048576 / w)), fmt: red ? gl.RED : gl.RGBA, done: () => done(tex) });
     if (!pumping) { pumping = true; requestAnimationFrame(pump); }
     return tex;
   }
@@ -339,7 +350,7 @@ export function createGlobes(mobile) {
    *  în dreptunghiul pătrat de latură S = D / (2 fr) (ca fostele cadre), tăiat la ecranul w × h.
    *  o: { alpha, ang (grade), cloud (grade), roll (radiani), dot (culoarea de rezervă), copies: [[scară, alfa], ...] }. Întoarce true dacă a desenat. */
   function draw(c, name, cx, cy, D, w, h, o) {
-    if (lost) return false;
+    if (lost || !progReady()) return false;
     const B = BODIES[name], S = D / (2 * B.fr);
     let x0 = Math.floor(cx - S / 2), y0 = Math.floor(cy - S / 2), x1 = Math.ceil(cx + S / 2), y1 = Math.ceil(cy + S / 2);
     x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(w, x1); y1 = Math.min(h, y1);
@@ -354,6 +365,7 @@ export function createGlobes(mobile) {
       if (k < 1) { t0 = mic.tex; c0 = mic.cl; t1 = big.tex; c1 = big.cl; mixv = k; anim = true; } else { t0 = big.tex; c0 = big.cl; s.shown = 2; }
     } else if (mic.st === 2) { t0 = mic.tex; c0 = mic.cl; if (s.shown < 1) s.shown = 1; }
     else has = 0;
+    gl.useProgram(prog); gl.bindFramebuffer(gl.FRAMEBUFFER, null);   // intro.js folosește același context, cu alte programe
     gl.viewport(0, cv.height - rh, rw, rh);
     gl.disable(gl.SCISSOR_TEST); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform4f(U.uVP, 0, cv.height - rh, rw, rh);
@@ -407,7 +419,11 @@ export function createGlobes(mobile) {
   }
   function ready(name) { const s = T[name]; return !!(s && (s.big.st === 2 || s.mic.st === 2)); }
   function stats() { const o = {}; for (const k in T) o[k] = { mare: ['-', 'se descarcă', 'gata', 'eliberată'][T[k].big.st], mica: ['-', 'se descarcă', 'gata', ''][T[k].mic.st] }; return { set: SET, aniso: maxAniso, uploads: uploads.length, coada: queue.length, harti: o }; }
-  return { draw, plan, loadAllMic, ready, stats, hooks: (f) => { onReady = f; }, get lost() { return lost; }, get level() { return level; }, canvas: cv };
+  // o hartă oarecare (intro.js): descărcată cu prioritate mare, încărcată în fâșii; cb(textura, lățime, înălțime)
+  function texFile(file, o, cb) {
+    want(file, 'big', 0, (bm) => { if (!bm) return; const w = bm.width, h = bm.height; makeTex(bm, o && o.clamp ? gl.CLAMP_TO_EDGE : gl.REPEAT, (t) => cb(t, w, h), o); });
+  }
+  return { draw, plan, loadAllMic, ready, stats, texFile, ensureSize, gl, hooks: (f) => { onReady = f; }, get lost() { return lost; }, get level() { return level; }, canvas: cv };
 }
 
 // ---------- un punct de pe suprafață (latitudine, longitudine, grade) → poziția pe disc, în raze (x spre dreapta, y în jos; z > 0 = fața văzută)

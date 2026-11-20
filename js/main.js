@@ -1,34 +1,26 @@
-// Pornirea: ecranul de încărcare și primele 24 de cadre din apus. Restul site-ului (app.js, cu journey.js)
-// se încarcă abia după aceea, cu import(), ca să nu stea în calea primului ecran.
-import { SEQ, F, boot, hasBM, bake } from './frames.js?v=2026111803';
+// Pornirea: ecranul de încărcare așteaptă doar imaginea statică a apusului (LCP, randată de shaderul intro-ului).
+// Restul site-ului (app.js, cu journey.js, globe.js și intro.js) se încarcă abia după aceea, cu import(), ca să nu stea
+// în calea primului ecran. WebGL pornește după ce pagina se afișează și preia imaginea fără salt (același cadru la 0%).
 
 // stilurile complete (style.css) abia după primul cadru afișat: primul ecran folosește CSS-ul critic din <head>
 requestAnimationFrame(() => setTimeout(() => {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'css/style.css?v=2026111803'; document.head.appendChild(l);
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'css/style.css?v=2026112001'; document.head.appendChild(l);
 }, 0));
 
-const N_BOOT = 8; // PROMPT-12: primele 8 din cele 70 de fotografii (~11% din apus; o fotografie are ~90 KB, nu ~8 KB ca un cadru video)
-let stopped = false, appP = null;
-{ const el = document.getElementById('nfr'); if (el) el.textContent = Object.values(SEQ).reduce((a, n) => a + n, 0).toLocaleString('ro-RO'); }
+let appP = null;
 const pctEl = document.getElementById('pct'), arc = document.getElementById('arc');
 function progress(p) {
   if (pctEl) pctEl.textContent = Math.round(p * 100);
   if (arc) arc.style.strokeDashoffset = (389.6 * (1 - p)).toFixed(1);
 }
-function missing() {
-  const t = document.getElementById('ltext');
-  if (t) { t.innerHTML = 'NU GĂSESC CADRELE.<br>Reîncarcă pagina.'; t.style.textAlign = 'center'; t.style.lineHeight = '1.8'; t.style.color = '#F2C48D'; }
-  stopped = true;
-}
 function startApp() {
-  if (stopped) return;
-  if (!appP) appP = import('./app.js?v=2026111803').then((a) => a.start(progress));
+  if (!appP) appP = import('./app.js?v=2026112001').then((a) => a.start(progress));
   return appP;
 }
-boot(N_BOOT, (k, n) => progress(0.9 * k / n)).then(async (ok) => {
-  if (ok < N_BOOT / 2) return missing();
-  const im = F.apus.imgs[0]; // primul cadru decodat înainte de apariție
-  if (im && hasBM && !F.apus.bm.has(0)) { try { F.apus.bm.set(0, await bake(im)); } catch (e) {} }
-  startApp();
-});
-setTimeout(startApp, 30000);
+const lcp = document.querySelector('#apus .lcp');
+progress(0.3);
+// app.js (și modulele lui) abia după primul cadru afișat, ca să nu intre în drumul critic al primei afișări
+const go = () => { progress(0.9); requestAnimationFrame(() => setTimeout(startApp, 0)); };
+if (!lcp || (lcp.complete && lcp.naturalWidth)) go();
+else { lcp.addEventListener('load', go, { once: true }); lcp.addEventListener('error', go, { once: true }); }
+setTimeout(startApp, 8000);

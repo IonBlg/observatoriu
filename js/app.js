@@ -1,18 +1,18 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SEQ, SET, BASE, F, hooks, run, plan, setTimeline, frameAt, pick, sleep, stats, onFirstMove, started } from './frames.js?v=2026111803';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026111803';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112001';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112001';
+import { createIntro } from './intro.js?v=2026112001';
 import {
   RM, clamp, ease, seg, lerp, fit, cover, stars, starsPan, sunGlow, drawSun, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026111803';
+} from './journey.js?v=2026112001';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
 const loadEl = document.getElementById('load');
-hooks(() => { dirty = true; fv++; if (revealed) req(); }, () => {});
 const pause = () => new Promise((r) => setTimeout(r, 0));
 async function steps(gen) { let t = performance.now(); for (const _ of gen) if (performance.now() - t > 12) { await pause(); t = performance.now(); } }
 // stilurile complete (style.css) se încarcă fără să blocheze afișarea; pagina apare doar după ce sunt aplicate
@@ -23,7 +23,7 @@ const cssReady = () => new Promise((res) => {
 export function start(progress) {
   if (!startP) startP = (async () => {
     await steps(layoutSteps(innerWidth, innerHeight)); if (progress) progress(0.95);
-    placeAnchors(); await steps(timelineSteps()); ready = true; dirty = true;
+    placeAnchors(); ready = true; dirty = true;
     await cssReady(); reveal();
   })();
   return startP;
@@ -33,24 +33,8 @@ function reveal() {
   scrollTo(0, 0);
   loadEl.classList.add('out'); document.body.classList.remove('locked');
   setTimeout(() => loadEl.remove(), 1200); req();
-  plan(scrollY, innerHeight); run();
+  introStart();
   if (/^#program/.test(location.hash)) setTimeout(() => goProgram((location.hash.match(/ev=(\w+)/) || [])[1]), 60); // link direct spre program
-}
-
-// ---------- linia de timp pentru coada de cadre: unde (în px de derulare) se vede fiecare cadru ----------
-function timeline() { for (const _ of timelineSteps()); }
-function* timelineSteps() {
-  const H = innerHeight, aTop = apusSec.offsetTop, aSpan = apusSec.offsetHeight - H, jTop = jSec.offsetTop, jSpan = jSec.offsetHeight - H;
-  const Y = (u) => jTop + u * jSpan, seq = {};
-  seq.apus = { y0: aTop, y1: aTop + 0.86 * aSpan };   // singura secvență de cadre rămasă (Soarele și Luna se desenează live)
-  yield;
-  // zonele: apusul, Soarele, apoi fiecare oprire (de la începutul drumului spre ea), apoi finalul
-  const zones = [{ y0: -Infinity }, { y0: jTop }];
-  for (let i = 1; i < ACT.length; i++) zones.push({ y0: Y(segOf('leg', ACT[i].key).a) });
-  zones.push({ y0: Y(segOf('tail').a) });
-  zones.forEach((z, k) => { z.y1 = k + 1 < zones.length ? zones[k + 1].y0 : Infinity; });
-  // apusul se descarcă întreg după prima derulare
-  setTimeline({ seq, zones, extra: [], near: { apus: [0, 1] } });
 }
 
 // ---------- muzica: motorul se încarcă doar la primul clic ----------
@@ -58,7 +42,7 @@ const sndBtn = document.getElementById('snd');
 let music = null, musicLoad = null, chapterNow = 'pamant';
 try { if (localStorage.getItem('observatoriu-muzica') === '1') { sndBtn.classList.add('armed'); sndBtn.title = 'Muzica era pornită. Apasă ca să cânte din nou.'; } } catch (e) {} // revenire: browserul cere un clic ca să cânte
 sndBtn.addEventListener('click', async () => {
-  if (!music) { musicLoad = musicLoad || import('./music.js?v=2026111803').then((m) => m.init(sndBtn, chapterNow)); music = await musicLoad; }
+  if (!music) { musicLoad = musicLoad || import('./music.js?v=2026112001').then((m) => m.init(sndBtn, chapterNow)); music = await musicLoad; }
   music.toggle();
 });
 
@@ -364,7 +348,7 @@ sheetList.addEventListener('click', (e) => {
 });
 
 // ---------- main loop ----------
-let raf = 0, qa = 0, qj = 0, dirty = true, lastKey = '', curSec = '', fv = 0;
+let raf = 0, qa = 0, qj = 0, dirty = true, lastKey = '', curSec = '';
 
 // ---------- globurile live (WebGL): contextul se creează după prima derulare; hărțile: corpul curent → următorul → cel de după ----------
 let G = null, gTried = false, spinT = 0, spinLast = 0, texIdxNow = -2;
@@ -374,6 +358,18 @@ function globes() {
   try { G = createGlobes(SET === 'm'); } catch (e) { console.warn('[globuri]', e); G = null; }
   if (G) G.hooks(() => { dirty = true; if (revealed) req(); });
   return G;
+}
+// intro-ul live: contextul WebGL (cel al globurilor) se creează imediat după afișare; fără WebGL sau cu mișcare redusă
+// rămâne imaginea statică (aceeași ca primul cadru)
+let intro = null, introT = 0;
+function introStart() {
+  if (RM) return;
+  const go = () => {
+    const g = globes(); if (!g) return;
+    try { intro = createIntro(g, SET === 'm'); } catch (e) { console.warn('[intro]', e); intro = null; }
+    if (intro) intro.hooks(() => req());
+  };
+  'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 600 }) : setTimeout(go, 100);
 }
 function staticOf(key) { // fără WebGL: un cadru static, clar
   let im = staticIm[key];
@@ -396,7 +392,7 @@ function req() { if (!raf) raf = requestAnimationFrame(frame); }
 function frame() {
   raf = 0;
   const now = performance.now(), dt = spinLast ? Math.min(0.1, (now - spinLast) / 1000) : 0; spinLast = 0;
-  let spinning = false;
+  let spinning = false, introAnim = false;
   const H = innerHeight, W = innerWidth, k = RM ? 1 : 0.13;
   const ta = prog(apusSec), tj = prog(jSec);
   qa += (ta - qa) * k; if (Math.abs(ta - qa) < 0.0002) qa = ta;
@@ -404,22 +400,24 @@ function frame() {
   if (qa !== ta || qj !== tj) req();
   barEl.style.transform = 'scaleX(' + clamp(scrollY / (document.documentElement.scrollHeight - H), 0, 1).toFixed(4) + ')';
 
-  // APUS
+  // APUS: randat live (intro.js), în contextul WebGL al globurilor; până la primul cadru se vede imaginea statică de sub canvas
   if (visible(apusSec)) {
-    const [w, h] = fit(apusCv), c = apusCv.getContext('2d', { alpha: false });
-    const z = 1 + Math.max(0, (qa - 0.86) / 0.14) * 0.9, pk = pick(F.apus, Math.min(1, qa / 0.86), Math.max(w, h * 16 / 9) * z);
-    const key = 'a' + qa.toFixed(4) + w + ':' + fv;
-    const fx = 0.5; // cadrele sunt decupate cu Soarele la mijloc (scriptul de randare apus_foto.py, în afara site-ului): pe telefon decupajul rămâne pe el
-    if (pk && key !== apusCv._k) { apusCv._k = key; cover(c, pk.a, w, h, z, 1, fx); if (pk.b) cover(c, pk.b, w, h, z, pk.k, fx); if (!apusCv._on) { apusCv._on = 1; apusCv.classList.add('on'); } } // până la primul cadru desenat se vede imaginea de sub canvas
+    if (intro && intro.ready()) {
+      const [w, h] = fit(apusCv), c = apusCv.getContext('2d', { alpha: false });
+      if (intro.draw(c, w, h, qa, introT)) {
+        if (!apusCv._on) { apusCv._on = 1; apusCv.classList.add('on'); }
+        if (!RM && !document.hidden) introAnim = true;   // Pământul „curge” foarte încet: desenăm continuu cât se vede
+      }
+    }
     const kk = RM ? 0 : Math.min(1, qa / 0.3);
     letters.forEach((el, i) => { const d = (i % 2 ? 1 : -1) * (1 + i % 3); el.style.transform = 'translate(' + (d * kk * 18).toFixed(1) + 'px,' + (-kk * (40 + (i * 37) % 160)).toFixed(1) + 'px) rotate(' + (d * kk * 6).toFixed(1) + 'deg)'; el.style.opacity = (1 - kk).toFixed(3); });
     cue.style.opacity = Math.max(0, 1 - qa / 0.06).toFixed(3);
     titleKick.style.opacity = Math.max(0, 1 - kk / 0.5).toFixed(3); // dispare înaintea literelor, ca să nu stea sub textul următor
     panels(apusPnls, qa);
-  } else sleep(F.apus);
+  }
 
   // CĂLĂTORIA
-  if (!visible(jSec)) { hudUpdate(0, false); loupeUpdate(-1); Object.keys(F).forEach((n) => { if (n !== 'apus') sleep(F[n]); }); } // toate secvențele călătoriei (lista din previzualizare era de dinaintea planetelor noi)
+  if (!visible(jSec)) { hudUpdate(0, false); loupeUpdate(-1); }
   if (visible(jSec) && ready) {
     const u = qj;
     texPlan(u);
@@ -526,10 +524,11 @@ function frame() {
   chapterNow = cur === 'apus' ? 'pamant' : cur === 'final' ? ACT[ACT.length - 1].music : ms ? ms.music : 'pamant';
   if (music) music.chapter(chapterNow);
   // un glob e pe ecran: rotația merge continuu, deci desenăm și cadrul următor (nu se oprește niciodată)
+  if (introAnim && revealed) { introT += dt; spinLast = now; req(); }
   if (spinning && revealed && !document.hidden) { spinT += dt; spinLast = now; dirty = true; req(); }
 }
-addEventListener('scroll', () => { if (revealed) { req(); plan(scrollY, innerHeight); } }, { passive: true });
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { dirty = true; apusCv._k = ''; layoutPanels(innerWidth, innerHeight); placeAnchors(); if (revealed) { timeline(); plan(scrollY, innerHeight); } req(); }, 150); });
+addEventListener('scroll', () => { if (revealed) req(); }, { passive: true });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { dirty = true; layoutPanels(innerWidth, innerHeight); placeAnchors(); req(); }, 150); });
 // video-ul de la final: sursa și posterul se pun abia când finalul e aproape; pornește doar când se vede
 const setVid = () => { if (!vid.src) { vid.poster = BASE + 'meteori-poster.webp'; vid.src = BASE + 'meteori.mp4'; } };
 if (vid && 'IntersectionObserver' in window) {
@@ -541,9 +540,9 @@ if (vid && 'IntersectionObserver' in window) {
 // data din titlul cardului se pune de la început (același text ca în sky.js), ca înălțimea cardului să nu se schimbe când sosește calculul
 try { document.getElementById('skyDate').textContent = ('Chișinău · ' + new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Chisinau' }) + ' · ora 21:00').toLocaleUpperCase('ro-RO'); } catch (e) {}
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026111803').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112001').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else askSky();
-if (DEBUG) window.__obs = { F, stats, G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
+if (DEBUG) window.__obs = { stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
 
 // ---------- cuvinte singure pe rând ----------
