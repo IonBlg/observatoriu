@@ -1,5 +1,7 @@
-// Intro (PROMPT-14): un apus văzut de pe orbită, randat live în WebGL2, în contextul globurilor (globe.js).
-// Camera stă la 400 km deasupra Mării Chinei de Est și privește spre vest-nord-vest, spre orizont.
+// Intro (PROMPT-14, PROMPT-15): un apus văzut de pe orbită, randat live în WebGL2, în contextul globurilor (globe.js).
+// Camera stă la 400 km deasupra Mării Chinei de Est și privește spre vest-nord-vest, spre orizont. După apus (PROMPT-15)
+// urcăm: camera se ridică până la ~20.000 km, Pământul se curbează și coboară în cadru, Soarele reapare de după margine
+// (roșu prin atmosferă, apoi alb), camera se întoarce spre el și pleacă; Pământul rămâne în urmă. Apoi preia călătoria (app.js).
 // - Pământul: harta Blue Marble și norii (aceleași ca la globul Pământului), luminile orașelor din NASA Black Marble 2016;
 // - atmosfera: împrăștiere simplă Rayleigh + Mie, cu absorbția ozonului. O tabelă mică (LUT, 192 × 512) ține lumina împrăștiată
 //   și transmisia pentru fiecare direcție (înălțimea față de limb × unghiul față de Soare); se recalculează doar când
@@ -8,22 +10,23 @@
 // - stelele: aceleași ca în restul călătoriei (STARS din journey.js, desenate la fel), apar după apus.
 // Camera „cover”: cadrul de referință (1920 × 1080 pe calculator, 1000 × 1500 pe telefon) se decupează ca o imagine cu
 // object-fit: cover, deci imaginea statică (LCP, randată de același shader) și desenul live se potrivesc la orice ecran.
-import { STARS } from './journey.js?v=2026112001';
+import { STARS } from './journey.js?v=2026112101';
 
 const RAD = Math.PI / 180;
 // ---------- Pământul și atmosfera (km) ----------
 const R = 6371, HCAM = 400, RC = R + HCAM, RA = R + 100;
 const DIP = Math.acos(R / RC);                       // cât de jos e orizontul văzut de pe orbită (~19,8°)
+const dipOf = (r) => Math.acos(R / r);
 const HR = 8, HM = 1.2;                              // înălțimile de scară Rayleigh și Mie
 const BR = [5.802e-3, 13.558e-3, 33.1e-3], BMS = 3.996e-3, BME = 4.44e-3, BO = [0.65e-3, 1.881e-3, 0.085e-3], OZK = 1.875;
 const SUNR = 0.2666 * RAD;                           // raza unghiulară a Soarelui
 // ---------- locul și cadrul ----------
 const GEO = { lat: 29.0, lon: 128.0, head: 283 };   // sub cameră: Marea Chinei de Est; privim spre 283° (VNV), spre Shanghai
-// harta luminilor e regională (noapte_textura.py): longitudine 102°…134°E, latitudine 18°…40°N
+// harta luminilor de detaliu e regională (noapte_textura.py): longitudine 102°…134°E, latitudine 18°…40°N; de sus, harta globală
 const NIGHT = [102, 134, 18, 40];
 export const REF = {
-  d: { W: 1920, H: 1080, f: 1321, sx: 0.62, ly: 0.52 },   // FOV orizontal 72°; Soarele la 62% din lățime, limbul la 52% din înălțime
-  m: { W: 1000, H: 1500, f: 680, sx: 0.50, ly: 0.34 }     // telefon (2:3): Soarele la mijloc, limbul la 34%
+  d: { W: 1920, H: 1080, f: 1321, sx: 0.62, ly: 0.52, ey: 0.5 },   // FOV orizontal 72°; Soarele la 62% din lățime, limbul la 52% din înălțime
+  m: { W: 1000, H: 1500, f: 680, sx: 0.50, ly: 0.34, ey: 0.68 }     // telefon (2:3): Soarele la mijloc, limbul la 34%
 };
 // înălțimea Soarelui deasupra limbului (grade) după derulare: 0 % deasupra · ~60 % atinge limbul · ~75 % a apus · 100 % noapte
 const SUNPATH = [[0, 6.5], [0.6, 0.45], [0.75, -0.3], [1, -4.5]];
@@ -37,6 +40,18 @@ export function sunElev(p) {
 }
 // stația „curge” foarte încet spre est (Pământul se mută spre orizont): 140 km pe toată derularea + ~0,6 km/s la început, tot mai încet
 export const drift = (p, t) => 140 * p + 250 * (1 - Math.exp(-t / 400));
+// ---------- urcarea (a = 0..1): înălțimea, Soarele care coboară mai departe (stația merge spre noapte), plecarea spre Soare ----------
+const ES1 = -DIP + SUNPATH[SUNPATH.length - 1][1] * RAD, ES2 = -58 * RAD;   // Soarele ajunge adânc în spatele Pământului: de sus se vede noaptea
+// 400 km → ~20.000 km (a = 1 → 0,7 exponențial), apoi mai repede, până la ~120.000 km: Pământul iese din cadru prin partea de jos
+export const riseH = (a) => HCAM * Math.exp(a * Math.log(50) + 19.9 * Math.pow(Math.max(0, a - 0.7), 2));
+const riseEs = (a) => ES1 + (ES2 - ES1) * smoothA(0, 0.6, a);
+function smoothA(a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+// stelele: același desen ca stars() din journey.js, la adâncimea de la începutul drumului spre Soare (app.js pornește de aici)
+export const STAR_CZ0 = 0.55 / 0.09;
+// raza Soarelui (pixeli CSS) în cadrul intro-ului, pe un ecran W × H (pentru preluare și pentru rezerva fără WebGL)
+// unde stă Soarele (pixeli CSS) la sfârșitul urcării
+export const introSunEnd = (W, H, mobile) => { const F = REF[mobile ? 'm' : 'd'], s = Math.max(W / F.W, H / F.H); return [W / 2, H / 2 + (F.ey - 0.5) * F.H * s]; };
+export const introSunR = (W, H, mobile) => { const F = REF[mobile ? 'm' : 'd']; return SUNR * F.f * Math.max(W / F.W, H / F.H); };
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // ---------- shaderele ----------
@@ -44,12 +59,13 @@ const VS = `#version 300 es
 void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
 
 const COMMON = `
-const float R = ${R.toFixed(1)}, RC = ${RC.toFixed(1)}, RA = ${RA.toFixed(1)}, HR = ${HR.toFixed(2)}, HM = ${HM.toFixed(2)};
+const float R = ${R.toFixed(1)}, RA = ${RA.toFixed(1)}, HR = ${HR.toFixed(2)}, HM = ${HM.toFixed(2)};
+uniform float RC, DIP, DA, DT, DLOW;   // raza camerei; cât de jos e limbul; tabela: -DA … DT în jurul limbului, DLOW spre nadir
 const vec3 BR = vec3(${BR.map((x) => x.toExponential(4)).join(',')});
 const float BMS = ${BMS.toExponential(4)}, BME = ${BME.toExponential(4)};
 const vec3 BO = vec3(${BO.map((x) => x.toExponential(4)).join(',')});
 const float OZK = ${OZK.toFixed(3)}, SUNR = ${SUNR.toExponential(5)}, PI = 3.14159265359;
-const float DIP = ${DIP.toFixed(7)}, DA = ${(-1.5 * RAD).toFixed(7)}, DT = ${(2.8 * RAD).toFixed(7)}, DLOW = ${((90 - DIP / RAD - 1.5) * RAD).toFixed(7)}, VK = 0.28;
+const float VK = 0.28;
 // coloana de aer (km × densitate) de la raza r spre direcția cu cos(zenit) = mu, pentru un strat exponențial cu scara H
 // (aproximarea Chapman; sub orizont: identitatea cu punctul tangent)
 float colDens(float r, float mu, float H) {
@@ -67,7 +83,7 @@ vec3 sunT(float r, float mu) {
   float nR = colDens(r, mu, HR), nM = colDens(r, mu, HM);
   return exp(-(BR * nR + BME * nM + BO * OZK * nR)) * vis;
 }
-// rândul tabelei ↔ unghiul față de limb (d, radiani): des lângă limb (-1,5° … 2,8°), rar spre nadir
+// rândul tabelei ↔ unghiul față de limb (d, radiani): des lângă limb (DA … DT, ~-1,5° … 2,8° de la 400 km), rar spre nadir
 float dOfV(float v) { return v >= VK ? DA + (v - VK) / (1.0 - VK) * (DT - DA) : DA - pow((VK - v) / VK, 2.0) * DLOW; }
 float vOfD(float d) { return d >= DA ? VK + (d - DA) / (DT - DA) * (1.0 - VK) : VK - sqrt(clamp((DA - d) / DLOW, 0.0, 1.0)) * VK; }
 `;
@@ -120,13 +136,15 @@ uniform vec4 uVP;              // viewportul (x, y, w, h) în pixelii canvasului
 uniform vec2 uC;               // centrul optic (pixeli, din stânga-sus)
 uniform float uF;              // distanța focală (pixeli)
 uniform vec3 uRt, uUp, uFw;    // baza camerei (lume: y în sus, Soarele spre +z)
-uniform vec3 uSun; uniform vec2 uSunH;
+uniform vec3 uSun;             // direcția Soarelui (lume)
+uniform vec3 uCam, uUpL, uLh, uXh;   // poziția camerei (lume, km) și baza locală: verticala, spre Soare pe orizontală, lateral
 uniform mat3 uGeo;             // lume → coordonatele Pământului (x: 0°/0°, y: 0°/90°E, z: polul nord)
 uniform vec3 uGlow;            // culoarea strălucirii (transmisia până la Soare × cât din disc se vede)
 uniform vec2 uSunPx;           // poziția Soarelui pe ecran (pixeli), pentru strălucire
 uniform float uExpo, uLights, uStars, uTime, uDisk, uFlat;   // uFlat: turtirea discului prin refracție, lângă limb
-uniform sampler2D uLutS, uLutT, uDay, uCloud, uNight, uStarT;
+uniform sampler2D uLutS, uLutT, uDay, uCloud, uNight, uNightG, uStarT;
 uniform vec2 uNightSz;
+uniform float uHasG, uShade;   // harta globală a luminilor a sosit · umbra de peste intro (ca vechiul .shade)
 uniform vec4 uNightBox;        // regiunea hărții luminilor: lon0, lon1, lat0, lat1 (grade)
 out vec4 o;
 ${COMMON}
@@ -137,20 +155,19 @@ vec3 lin(vec3 c) { return c * c * (0.3 + 0.7 * c); }   // sRGB → liniar (aprox
 void main() {
   vec2 px = vec2(gl_FragCoord.x - uVP.x, uVP.y + uVP.w - gl_FragCoord.y);
   vec3 V = normalize(uFw * uF + uRt * (px.x - uC.x) - uUp * (px.y - uC.y));
-  // tabela atmosferei
-  float e = asin(clamp(V.y, -1.0, 1.0));
-  vec2 hz = V.xz / max(length(V.xz), 1e-6);
-  float phi = acos(clamp(dot(hz, uSunH), -1.0, 1.0));
+  // tabela atmosferei, în baza locală a camerei
+  float vy = dot(V, uUpL), e = asin(clamp(vy, -1.0, 1.0));
+  float azV = atan(dot(V, uXh), dot(V, uLh)), phi = abs(azV);
   vec2 luv = vec2(sqrt(phi / PI), vOfD(e + DIP));
   vec3 S = texture(uLutS, luv).rgb, T = texture(uLutT, luv).rgb;
   if (ENC == 1) S = S / max(1.0 - S, 1e-3);
   // marginea Pământului, netedă pe un pixel (unghiul față de nadir comparat cu raza unghiulară a Pământului)
-  float a = acos(clamp(-V.y, -1.0, 1.0)), aL = ${(Math.PI / 2 - DIP).toFixed(7)};
+  float a = acos(clamp(-vy, -1.0, 1.0)), aL = 1.5707963 - DIP;
   float cov = clamp((aL - a) / max(fwidth(a), 1e-6) + 0.5, 0.0, 1.0);
   vec3 col = S, sky = vec3(0.0), gnd = vec3(0.0);
   if (cov > 0.0) {
-    vec3 C = vec3(0.0, RC, 0.0);
-    float b = dot(C, V), dg = max(0.0, b * b - (RC * RC - R * R));
+    vec3 C = uCam;
+    float b = dot(C, V), dg = max(0.0, b * b - (dot(C, C) - R * R));
     vec3 P = C + V * (-b - sqrt(dg)), n = normalize(P);
     vec3 g = uGeo * n;
     vec2 uv = vec2(atan(g.y, g.x) / (2.0 * PI) + 0.5, 0.5 - asin(clamp(g.z, -1.0, 1.0)) / PI);
@@ -173,6 +190,14 @@ void main() {
     vec2 tq = nuv * uNightSz; float mag = 1.0 / max(length(fwidth(tq)), 1e-4);
     float sp = vn(tq * 3.1) * 0.6 + vn(tq * 7.3 + 9.0) * 0.4;
     L *= mix(1.0, 0.35 + 1.3 * sp * sp, smoothstep(2.5, 6.0, mag));
+    // de sus: harta globală (aceeași scară de luminozitate); decupajul regional rămâne doar înăuntrul lui, cu trecere lină
+    vec2 ed = min(nuv, 1.0 - nuv);
+    float wR = uHasG > 0.5 ? smoothstep(0.015, 0.08, min(ed.x, ed.y)) : 1.0;
+    if (wR < 1.0) {
+      float Gn = texture(uNightG, uv).r, Gg = textureLod(uNightG, uv, 3.0).r;
+      L = mix(Gn * Gn + Gg * Gg * 0.5, L, wR);
+      Lg = mix(Gg, Lg, wR);
+    }
     float night = smoothstep(-0.05, -0.17, mu);
     surf += vec3(1.0, 0.70, 0.40) * L * night * (1.0 - 0.85 * cl) * uLights * 0.11;
     surf += vec3(1.0, 0.78, 0.55) * Lg * Lg * cl * night * uLights * 0.02;   // norii luminați de jos, de oraș
@@ -181,7 +206,7 @@ void main() {
   }
   // cerul: discul Soarelui (întunecare spre margine), stelele se pun după
   // (în coordonate locale: azimut × înălțime; lângă limb, refracția turtește discul pe verticală)
-  float eS = asin(uSun.y), dEl = e - eS, dAz = atan(V.x, V.z) * cos(e);
+  float eS = asin(clamp(dot(uSun, uUpL), -1.0, 1.0)), dEl = e - eS, dAz = azV * cos(e);
   float rr = length(vec2(dAz, dEl * uFlat)) / SUNR;
   if (rr < 1.6) {
     float pw = max(fwidth(rr), 1e-4), edge = 1.0 - smoothstep(1.0 - pw, 1.0 + pw, rr);
@@ -195,6 +220,7 @@ void main() {
   vec3 m = 1.0 - exp(-col * uExpo);
   m = pow(m, vec3(1.0 / 2.2));
   m = mix(m, m * m * (3.0 - 2.0 * m), 0.35);                 // puțin contrast: negru mai adânc, dunga mai vie
+  m = m * uShade + vec3(8.0, 5.0, 10.0) / 255.0 * (1.0 - uShade);   // umbra de peste apus (fostul .shade, 16%)
   // stelele (aceeași textură ca la călătorie), stinse de atmosferă și ascunse de Pământ
   float st = texelFetch(uStarT, ivec2(px), 0).r * uStars * (1.0 - cov) * dot(T, vec3(0.3, 0.5, 0.2));
   m += st * (1.0 - m);
@@ -210,9 +236,9 @@ function colDens(r, mu, H) {
   const r0 = r * Math.sqrt(Math.max(0, 1 - mu * mu)), d0 = Math.exp(Math.min(40, -(r0 - R) / H));
   return H * (2 * Math.sqrt(1.5707963 * r0 / H) * d0 - Math.exp(-alt / H) * c / ((c - 1) * -mu + 1));
 }
-// transmisia pe raza de la cameră spre Soare (camera e în afara atmosferei): de două ori coloana de la punctul tangent
-function viewT(e) {
-  const r0 = RC * Math.cos(e);   // raza punctului tangent (e < 0)
+// transmisia pe raza de la cameră (raza rc) spre o direcție cu înălțimea e față de orizontul local (camera e în afara atmosferei)
+function viewT(e, rc) {
+  const r0 = rc * Math.cos(e);   // raza punctului tangent (e < 0)
   if (e >= 0 || r0 >= RA) return [1, 1, 1];
   const nR = 2 * colDens(r0, 0, HR), nM = 2 * colDens(r0, 0, HM);
   return BR.map((b, i) => Math.exp(-(b * nR + BME * nM + BO[i] * OZK * nR)));
@@ -264,23 +290,26 @@ export function createIntro(G, mobile) {
   if (!fbOk) { console.warn('[intro] tabela atmosferei nu se poate randa, rămâne imaginea statică'); return null; }
   // fără EXT_color_buffer_float: tabela în 8 biți, cu lumina împrăștiată codată x / (1 + x)
   // ---------- hărțile: ziua și norii (2048, ca pe telefon), luminile (d: 4096) ----------
-  const tex = { day: null, cloud: null, night: null };
+  const tex = { day: null, cloud: null, night: null, glob: null };
   let nightSz = [2048, 1024];
   G.texFile('pamant-m.webp', { aniso: 16 }, (t) => { tex.day = t; ping(); });
   G.texFile('nori-m.webp', { aniso: 16, red: true }, (t) => { tex.cloud = t; ping(); });
   G.texFile('noapte-' + SET + '.webp', { aniso: 16, red: true, clamp: true }, (t, w, h) => { tex.night = t; nightSz = [w, h]; ping(); });
+  // harta globală a luminilor (pentru urcare): abia la cerere (app.js o cere după prima derulare), nu la deschidere
+  let globAsked = false;
+  function loadGlobal() { if (globAsked) return; globAsked = true; G.texFile('noapte-glob-' + SET + '.webp', { aniso: 16, red: true }, (t) => { tex.glob = t; onReady(); }); }
   let onReady = () => {};
   function ping() { if (ready()) onReady(); else if (tex.day && tex.cloud && tex.night && progOk === 0) setTimeout(ping, 50); }
   const ready = () => !!(tex.day && tex.cloud && tex.night) && !G.lost && progReady();
-  // ---------- stelele: aceleași ca la începutul călătoriei (journey.js, stars() cu cz = 0), desenate o dată pe mărimea ecranului ----------
+  // ---------- stelele: aceleași ca în călătorie (journey.js, stars()), la adâncimea STAR_CZ0 de la începutul drumului spre Soare ----------
   let starTex = null, starKey = '';
   function starLayer(w, h) {
     const k = w + 'x' + h; if (k === starKey && starTex) return; starKey = k;
     const c2 = document.createElement('canvas'); c2.width = w; c2.height = h;
     const c = c2.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.fillStyle = '#FFF1DD';
-    const cx = w / 2, cy = h / 2, f = Math.max(w, h) * 0.5;
+    const cx = w / 2, cy = h / 2, f = Math.max(w, h) * 0.5, D = STAR_CZ0 * 0.09;
     for (const s of STARS) {
-      const z = s.z <= 0.02 ? s.z + 1 : s.z;
+      let z = s.z - (D % 1); if (z <= 0.02) z += 1;
       const x = cx + s.x / z * f * 0.35, y = cy + s.y / z * f * 0.35;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
       const sz = (1 - z) * 1.8 + 0.4;
@@ -297,6 +326,8 @@ export function createIntro(G, mobile) {
   const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const scale = (a, k) => [a[0] * k, a[1] * k, a[2] * k], vlen = (a) => Math.hypot(a[0], a[1], a[2]);
   function basis(yaw, pitch) {
     const Fw = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
     const Rt = norm(cross(Fw, [0, 1, 0])), Up = cross(Rt, Fw);
@@ -333,52 +364,109 @@ export function createIntro(G, mobile) {
     const col1 = [0, 1, 2].map((i) => up[i] * cb + fwd[i] * sb), col2 = [0, 1, 2].map((i) => -up[i] * sb + fwd[i] * cb);
     return [xw[0], xw[1], xw[2], col1[0], col1[1], col1[2], col2[0], col2[1], col2[2]];   // column-major
   }
-  let lutEl = null;
-  function drawLut(L) {
+  // parametrii tabelei pentru camera la raza rc: limbul la -DIP, atmosfera (100 km) între limb și DT
+  function lutPar(rc) {
+    const dip = dipOf(rc), dt = (dip - Math.acos(RA / rc)) * 1.04, da = -0.55 * dt;
+    return { rc, dip, da, dt, dlow: Math.PI / 2 - dip + da };
+  }
+  const setPar = (U, q) => { gl.uniform1f(U.RC, q.rc); gl.uniform1f(U.DIP, q.dip); gl.uniform1f(U.DA, q.da); gl.uniform1f(U.DT, q.dt); gl.uniform1f(U.DLOW, q.dlow); };
+  let lutKey = '';
+  function drawLut(Lloc, q) {
     gl.useProgram(lut.p); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
     gl.viewport(0, 0, LW, LH); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.BLEND);
-    gl.uniform2f(lut.U.uSize, LW, LH); gl.uniform3fv(lut.U.uSun, L);
+    gl.uniform2f(lut.U.uSize, LW, LH); gl.uniform3fv(lut.U.uSun, Lloc); setPar(lut.U, q);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
-  /** Desenează intro-ul în contextul 2D `c` (w × h pixeli), la derularea p (0..1) și timpul t (secunde). */
-  function draw(c, w, h, p, t, kind) {
+  // ---------- starea cadrului: Soarele, camera (poziție + orientare) la apus (p) și la urcare (a) ----------
+  function solveCam(C, L, up, f, tx, ty, tys, w, yaw0, pitch0) {
+    // yaw: Soarele la tx; pitch: amestec între „limbul la ty” și „Soarele la mijlocul ecranului” (w)
+    const dip = dipOf(vlen(C));
+    const lh = norm(sub(L, scale(up, dot(L, up)))), limb = norm(sub(scale(lh, Math.cos(dip)), scale(up, Math.sin(dip))));
+    let yaw = yaw0, pitch = pitch0;
+    for (let it = 0; it < 24; it++) {
+      const B = basis(yaw, pitch), s = proj(B, L, f);
+      yaw -= (s[0] - tx) / f * 0.9;
+      let pl = 0, ps = 0;
+      if (w < 1) { const l = proj(B, limb, f); pl = (l[1] - ty) / f; }
+      if (w > 0) ps = (s[1] - tys) / f;
+      pitch -= (pl * (1 - w) + ps * w) * 0.9;
+    }
+    return { yaw, pitch };
+  }
+  let camPrev = null;
+  function state(kind, w, h, p, a, t) {
+    const F = REF[kind], s = Math.max(w / F.W, h / F.H), f = F.f * s;
+    let L, C, B, dr = drift(p, t);
+    if (a <= 0) {
+      const es = -DIP + sunElev(p) * RAD;
+      L = dirOf(0, es); C = [0, RC, 0]; B = camFor(kind);
+    } else {
+      const es = riseEs(a);
+      dr += (ES1 - es) * R;   // stația merge mai departe spre noapte: Pământul se rotește sub ea
+      L = dirOf(0, es);
+      C = [0, R + riseH(a), 0];   // urcăm drept în sus: partea dinspre noi rămâne noaptea, Pământul coboară și iese din cadru
+      const up = norm(C), B0 = camFor(kind), y0 = Math.atan2(B0.Fw[0], B0.Fw[2]), p0 = Math.asin(B0.Fw[1]);
+      const tx = (F.sx - 0.5) * F.W * s * (1 - smoothA(0, 0.8, a)), ty = ((F.ly + (0.74 - F.ly) * smoothA(0, 0.55, a)) - 0.5) * F.H * s;
+      const prev = camPrev && camPrev.kind === kind ? camPrev : { yaw: y0, pitch: p0 };
+      const tys = (F.ey - 0.5) * F.H * s;   // la sfârșit: Soarele la (mijloc, ey); pe telefon mai jos, ca Pământul să iasă din cadrul înalt
+      const o = solveCam(C, L, up, f, tx, ty, tys, smoothA(0.5, 0.92, a), a < 0.02 ? y0 : prev.yaw, a < 0.02 ? p0 : prev.pitch);
+      camPrev = { kind, yaw: o.yaw, pitch: o.pitch };
+      B = basis(o.yaw, o.pitch);
+    }
+    return { F, s, f, L, C, B, dr };
+  }
+  /** Desenează intro-ul în contextul 2D `c` (w × h pixeli): apusul la p (0..1), urcarea la a (0..1), timpul t (secunde).
+   *  o: { alpha, kind }. */
+  function draw(c, w, h, p, t, o) {
     if (!ready()) return false;
-    kind = kind || (mobile ? 'm' : 'd');
-    const F = REF[kind], s = Math.max(w / F.W, h / F.H), f = F.f * s, B = camFor(kind);
-    const el = sunElev(p) * RAD, es = -DIP + el;
-    const L = dirOf(0, es);
-    if (lutEl !== es) { lutEl = es; drawLut(L); }
+    o = o || {};
+    const kind = o.kind || (mobile ? 'm' : 'd'), a = o.a || 0;
+    const S = state(kind, w, h, p, a, t), { f, L, C, B } = S;
+    const rc = vlen(C), up = norm(C), q = lutPar(rc);
+    const lh0 = sub(L, scale(up, dot(L, up))), lh = vlen(lh0) > 1e-6 ? norm(lh0) : norm(cross(up, [1, 0, 0])), xh = cross(up, lh);
+    const esl = Math.asin(Math.max(-1, Math.min(1, dot(L, up))));   // înălțimea Soarelui față de orizontul local
+    const Lloc = [0, Math.sin(esl), Math.cos(esl)];
+    const key = rc.toFixed(3) + ':' + esl.toFixed(7);
+    if (key !== lutKey) { lutKey = key; drawLut(Lloc, q); }
     starLayer(w, h);
     G.ensureSize(w, h);
     gl.useProgram(main.p); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, cv.height - h, w, h);
     const U = main.U;
+    setPar(U, q);
     gl.uniform4f(U.uVP, 0, cv.height - h, w, h);
     gl.uniform2f(U.uC, w / 2, h / 2); gl.uniform1f(U.uF, f);
     gl.uniform3fv(U.uRt, B.Rt); gl.uniform3fv(U.uUp, B.Up); gl.uniform3fv(U.uFw, B.Fw);
-    gl.uniform3fv(U.uSun, L); gl.uniform2f(U.uSunH, 0, 1);
-    gl.uniformMatrix3fv(U.uGeo, false, geoMat(drift(p, t)));
-    // strălucirea: transmisia spre partea vizibilă a discului × fracțiunea vizibilă (segment de cerc)
-    const x = Math.max(-1, Math.min(1, -el / SUNR)), frac = (Math.acos(x) - x * Math.sqrt(1 - x * x)) / Math.PI;
-    const Tg = viewT(Math.max(es, -DIP + Math.min(SUNR, Math.max(0, el + SUNR)) * 0.5 + 2e-5));
-    const gk = frac * 1.0;
-    gl.uniform3f(U.uGlow, Tg[0] * gk, Tg[1] * gk, Tg[2] * gk);
+    gl.uniform3fv(U.uSun, L); gl.uniform3fv(U.uCam, C); gl.uniform3fv(U.uUpL, up); gl.uniform3fv(U.uLh, lh); gl.uniform3fv(U.uXh, xh);
+    gl.uniformMatrix3fv(U.uGeo, false, geoMat(S.dr));
+    // strălucirea: transmisia spre partea vizibilă a discului × fracțiunea vizibilă (segment de cerc) față de limbul tare
+    const el = esl + q.dip, x = Math.max(-1, Math.min(1, -el / SUNR)), frac = (Math.acos(x) - x * Math.sqrt(1 - x * x)) / Math.PI;
+    const Tg = viewT(Math.max(esl, -q.dip + Math.min(SUNR, Math.max(0, el + SUNR)) * 0.5 + 2e-5), rc);
+    gl.uniform3f(U.uGlow, Tg[0] * frac, Tg[1] * frac, Tg[2] * frac);
     const sp = proj(B, L, f); gl.uniform2f(U.uSunPx, w / 2 + sp[0], h / 2 + sp[1]);
-    // expunerea crește după apus (ca la un aparat), luminile orașelor și stelele apar
-    const nt = smooth(0.62, 0.98, p);
-    gl.uniform1f(U.uExpo, 2.8 + 2.2 * nt);
+    // expunerea crește după apus (ca la un aparat) și scade la loc când Soarele reapare; luminile orașelor și stelele
+    const nt = smooth(0.62, 0.98, p), back = smoothA(0.62, 0.8, a);
+    gl.uniform1f(U.uExpo, (2.8 + 2.2 * nt) * (1 - back) + 2.8 * back);
     gl.uniform1f(U.uLights, 0.12 + 0.88 * smooth(0.55, 0.95, p));
     gl.uniform1f(U.uStars, smooth(0.72, 1.0, p));
+    gl.uniform1f(U.uShade, 0.84 + 0.16 * smoothA(0.55, 1, a));
     gl.uniform1f(U.uDisk, 42); gl.uniform1f(U.uTime, t);
-    const ht = RC * Math.cos(es) - R;   // înălțimea punctului tangent al razei spre Soare (km)
+    const ht = rc * Math.cos(esl) - R;   // înălțimea punctului tangent al razei spre Soare (km)
     gl.uniform1f(U.uFlat, 1 + 1.3 * Math.exp(-Math.max(0, ht) / 7));
     gl.uniform2f(U.uNightSz, nightSz[0], nightSz[1]); gl.uniform4f(U.uNightBox, NIGHT[0], NIGHT[1], NIGHT[2], NIGHT[3]);
+    gl.uniform1f(U.uHasG, tex.glob ? 1 : 0);
     const bind = (u, tx, name) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, tx); gl.uniform1i(U[name], u); };
-    bind(0, lutTex[0], 'uLutS'); bind(1, lutTex[1], 'uLutT'); bind(2, tex.day, 'uDay'); bind(3, tex.cloud, 'uCloud'); bind(4, tex.night, 'uNight'); bind(5, starTex, 'uStarT');
+    bind(0, lutTex[0], 'uLutS'); bind(1, lutTex[1], 'uLutT'); bind(2, tex.day, 'uDay'); bind(3, tex.cloud, 'uCloud'); bind(4, tex.night, 'uNight'); bind(5, starTex, 'uStarT'); bind(6, tex.glob || tex.night, 'uNightG');
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const al = o.alpha == null ? 1 : o.alpha;
+    if (al < 1) c.globalAlpha = al;
     c.drawImage(cv, 0, 0, w, h, 0, 0, w, h);
+    c.globalAlpha = 1;
     return true;
   }
-  return { draw, ready, hooks: (f) => { onReady = f; }, info: () => ({ float: hasF, set: SET }), probe: (kind, drift) => ({ B: camFor(kind), M: geoMat(drift || 0) }) };
+  /** Mărimea Soarelui (rază, pixeli) la sfârșitul urcării, pentru preluarea de către călătorie (app.js). */
+  const sunR = (w, h, kind) => { const F = REF[kind || (mobile ? 'm' : 'd')]; return SUNR * F.f * Math.max(w / F.W, h / F.H); };
+  const sunF = (w, h, kind) => { const F = REF[kind || (mobile ? 'm' : 'd')]; return F.f * Math.max(w / F.W, h / F.H); };
+  return { draw, ready, loadGlobal, sunR, sunF, hooks: (f) => { onReady = f; }, info: () => ({ float: hasF, set: SET, glob: !!tex.glob }), probe: (kind, drift) => ({ B: camFor(kind), M: geoMat(drift || 0) }) };
 }

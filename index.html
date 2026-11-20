@@ -68,8 +68,8 @@ section.pin{position:relative}
 .ltr{display:inline-block;will-change:transform,opacity}
 .cred{position:absolute;right:16px;bottom:12px;z-index:6;margin:0;padding:6px 12px;border-radius:5px;background:rgba(5,4,9,.72);font-size:13px;color:rgba(255,241,221,.9);text-shadow:none;transition:opacity .3s}
 .cred a{color:#FFF1DD;text-decoration:underline}
-#apus .cred{top:86px;bottom:auto}
-#calatorie .cred{right:auto;left:max(160px,9vw);max-width:calc(100vw - max(160px,9vw) - 400px)}
+#cred-apus{top:86px;bottom:auto}
+#cred-render{right:auto;left:max(160px,9vw);max-width:calc(100vw - max(160px,9vw) - 400px)}
 .cred.away{opacity:0!important}
 .shade{position:absolute;inset:0;z-index:1;pointer-events:none}
 h1,h2,h3,.big,.quote,.kick{text-wrap:balance}
@@ -86,7 +86,7 @@ p,.lead,li{text-wrap:pretty}
 .load small{font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.06em;color:rgba(255,241,221,.86)}
 body.locked{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.load .dot{animation:none}.load .orb{transition:none}}
-@media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}#apus .pnl.a1,#apus .pnl.a2{top:44vh!important;bottom:auto!important}#apus .pnl.a3{top:auto!important;bottom:12vh!important}}
+@media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}.pnl.a1,.pnl.a2{top:44vh!important;bottom:auto!important}.pnl.a3{top:auto!important;bottom:12vh!important}.pnl.a4{top:14vh!important}}
 .snd{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.6);background:rgba(5,4,9,.18);color:#fff;font:500 14px 'Geist',system-ui,sans-serif;cursor:pointer;transition:background .3s,border-color .3s,color .3s}
 .snd svg{width:20px;height:20px;flex:none}
 .snd .on-i{display:none}.snd[aria-pressed="true"] .on-i{display:inline}.snd[aria-pressed="true"] .off-i{display:none}
@@ -146,12 +146,12 @@ body.sheet-open{overflow:hidden}
 .skip{position:fixed;left:16px;top:-80px;z-index:70;padding:12px 18px;border-radius:999px;background:var(--gold);color:#140E12!important;font-weight:500;transition:top .2s}
 .skip:focus{top:12px}
 #main:focus{outline:none}
-#apus .lcp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block}
-#apus canvas{opacity:0}#apus canvas.on{opacity:1}
+.stage .lcp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block}
+#space{opacity:0}
 </style>
 <!--/critic-->
-<noscript><link rel="stylesheet" href="css/style.css?v=2026112001"></noscript>
-<script type="module" src="js/main.js?v=2026112001"></script>
+<noscript><link rel="stylesheet" href="css/style.css?v=2026112101"></noscript>
+<script type="module" src="js/main.js?v=2026112101"></script>
 </head>
 <body class="locked">
 <a class="skip" href="#main">Sari la conținut</a>
@@ -189,36 +189,32 @@ body.sheet-open{overflow:hidden}
 </nav>
 
 <main id="main" tabindex="-1">
-<!-- 1. APUS -->
-<section id="apus" class="pin" data-seq="apus" style="height:420vh">
+
+
+<!-- 1–2. O SINGURĂ SCENĂ: apusul de pe orbită, urcarea, apoi urmăm lumina, de la Soare spre exterior. Opririle, momentele și ancorele se calculează din lista STOPS. -->
+<section id="calatorie" class="pin" style="height:4130vh">
+<span id="apus" class="anchor"></span><span id="soare" class="anchor"></span><span id="mercur" class="anchor"></span><span id="venus" class="anchor"></span><span id="pamant" class="anchor"></span><span id="luna" class="anchor"></span><span id="marte" class="anchor"></span><span id="jupiter" class="anchor"></span><span id="saturn" class="anchor"></span><span id="uranus" class="anchor"></span><span id="neptun" class="anchor"></span>
 <div class="stage">
-<picture><source media="(max-width:767px)" srcset="media/static/intro-m.webp?v=1" width="1000" height="1500"><img class="lcp" src="media/static/intro-d.webp?v=1" width="1920" height="1080" alt="" fetchpriority="high"></picture>
-<canvas aria-hidden="true"></canvas>
-<div class="shade" style="background:rgba(8,5,10,.16)"></div>
+<picture><source media="(max-width:767px)" srcset="media/static/intro-m.webp?v=2" width="1000" height="1500"><img class="lcp" src="media/static/intro-d.webp?v=2" width="1920" height="1080" alt="" fetchpriority="high"></picture>
+<canvas id="space" aria-hidden="true"></canvas>
+<!-- APUSUL, URCAREA: aceeași scenă (intro.js desenează în același canvas, apoi preia călătoria) -->
 <div id="title" style="position:absolute;z-index:3;left:0;right:0;bottom:9vh;text-align:center;pointer-events:none">
 <p id="titleKick" class="mono" style="margin:0 0 6px;font-size:13px;letter-spacing:.1em;text-shadow:0 1px 12px rgba(0,0,0,.4)">UN PLANETARIU · O SEARĂ PRIN SISTEMUL SOLAR</p>
 <h1 class="ser" aria-label="Observatoriu" style="margin:0;font-size:clamp(64px,15.5vw,260px);line-height:.82;font-style:italic;letter-spacing:-.03em;text-shadow:0 2px 40px rgba(0,0,0,.25)"><span class="ltr" aria-hidden="true">O</span><span class="ltr" aria-hidden="true">b</span><span class="ltr" aria-hidden="true">s</span><span class="ltr" aria-hidden="true">e</span><span class="ltr" aria-hidden="true">r</span><span class="ltr" aria-hidden="true">v</span><span class="ltr" aria-hidden="true">a</span><span class="ltr" aria-hidden="true">t</span><span class="ltr" aria-hidden="true">o</span><span class="ltr" aria-hidden="true">r</span><span class="ltr" aria-hidden="true">i</span><span class="ltr" aria-hidden="true">u</span></h1>
 </div>
 <p id="cue" class="mono" style="position:absolute;z-index:3;left:50%;bottom:3vh;transform:translateX(-50%);margin:0;padding:8px 16px;border-radius:999px;background:rgba(5,4,9,.6);font-size:13px;letter-spacing:.1em;white-space:nowrap">DERULEAZĂ — SOARELE APUNE ODATĂ CU TINE</p>
-<div class="pnl a1" data-a="0.06" data-b="0.32" style="top:15vh;left:clamp(16px,5vw,80px);max-width:480px">
+<div class="pnl a1 ip" data-seg="intro" data-a="0.038" data-b="0.204" style="top:15vh;left:clamp(16px,5vw,80px);max-width:480px">
 <p class="kick">ȘTIAI CĂ…</p>
 <p class="ser quote" style="font-size:clamp(28px,3vw,44px)">Așa arată un apus de pe orbită. Astronauții de pe Stația Spațială văd cam 16 apusuri pe zi. Lumina lui a plecat de la Soare acum 8 minute și 20 de secunde.</p></div>
-<div class="pnl a2" data-a="0.36" data-b="0.64" style="left:clamp(16px,5vw,80px);bottom:12vh;max-width:980px">
+<div class="pnl a2 ip" data-seg="intro" data-a="0.230" data-b="0.409" style="left:clamp(16px,5vw,80px);bottom:12vh;max-width:980px">
 <h2 class="ser big">Cerul nu e niciodată <em>la fel</em> de două ori.</h2></div>
-<div class="pnl a3" data-a="0.60" data-b="0.86" style="top:22vh;left:clamp(16px,5vw,80px);width:400px">
+<div class="pnl a3 ip" data-seg="intro" data-a="0.383" data-b="0.549" style="top:22vh;left:clamp(16px,5vw,80px);width:400px">
 <p class="ser" style="margin:0;font-size:34px;line-height:1.08">Vino la apus. Până după miezul nopții urmăm lumina Soarelui, până la marginea Sistemului Solar.</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px"><a class="btn btn-gold" href="#program">Rezervă o seară</a><a class="btn btn-ghost" href="#soare">Începe călătoria</a></div></div>
-<p class="cred mono">Pământul: randat din hărțile NASA <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble</a> și <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps/">Black Marble</a> · domeniu public</p>
-</div></section>
-
-<!-- 2. CĂLĂTORIA: urmăm lumina, de la Soare spre exterior. Opririle, momentele și ancorele se calculează din lista STOPS. -->
-<section id="calatorie" class="pin" style="height:3600vh">
-<span id="soare" class="anchor"></span><span id="mercur" class="anchor"></span><span id="venus" class="anchor"></span><span id="pamant" class="anchor"></span><span id="luna" class="anchor"></span><span id="marte" class="anchor"></span><span id="jupiter" class="anchor"></span><span id="saturn" class="anchor"></span><span id="uranus" class="anchor"></span><span id="neptun" class="anchor"></span>
-<div class="stage">
-<div class="lens" style="position:absolute;inset:0"><canvas id="space" aria-hidden="true"></canvas></div>
-<div class="ring" aria-hidden="true"></div>
-
-<div class="pnl" data-free data-seg="ocular" style="left:50%;top:50%;width:360px;margin-left:-180px;margin-top:calc(17vmin + 22px);text-align:center"><p class="mono" style="margin:0;font-size:13px;letter-spacing:.1em">PRIVEȘTE PRIN OCULAR</p></div>
+<div class="pnl a4 ip" data-seg="intro" data-a="0.765" data-b="0.905" style="top:15vh;left:clamp(16px,5vw,80px);max-width:440px">
+<p class="kick">URCĂM</p>
+<p class="ser quote" style="font-size:clamp(28px,2.8vw,40px)">Soarele a apus pentru Pământ. Nu și pentru noi.</p></div>
+<p class="cred mono" id="cred-apus">Pământul: randat din hărțile NASA <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble</a> și <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps/">Black Marble</a> · domeniu public</p>
 
 <!-- SOARELE -->
 <div class="pnl" data-stop="soare" data-at style="top:16vh;max-width:560px">

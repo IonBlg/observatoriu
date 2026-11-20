@@ -11,8 +11,9 @@ const RAD = Math.PI / 180;
 const A = (r, g, b, p) => [r, g, b, p];
 export const BODIES = {
   // Soarele (PROMPT-11): o singură imagine SDO (HMI 4096², 9 mai 2024) ca textură a discului + inelul AIA 304 (protuberanțele, cu alfa);
-  // fr = raza discului în dreptunghi (protuberanțele ajung la 1,5 raze). Fără rotație vizibilă (o rotație durează ~27 de zile).
-  soare:   { tex: 'soare',   fr: 1 / 3,  sun: true, clouds: 'soare-p', lum: 1 },
+  // fr = raza discului în dreptunghi (protuberanțele ajung la 1,5 raze).
+  // PROMPT-15: se rotește ca planetele (accelerat, mai încet decât Jupiter): petele arată că e o sferă
+  soare:   { tex: 'soare',   fr: 1 / 3,  sun: true, clouds: 'soare-p', lum: 1, lon: 0, rot: 25, spin: 2.4 },
   mercur:  { tex: 'mercur',  fr: 0.45,   inc: 8,     axa: 0,     fe: 0,      lon: 20,  rot: 60,   spin: 1.6,  minn: 0.62, atm: null, lum: 1 },
   venus:   { tex: 'venus',   fr: 0.45,   inc: 6,     axa: 2.6,   fe: 0,      lon: 0,   rot: -55,  spin: -1.1, minn: 0.52, atm: A(1.0, 0.95, 0.84, 0.30), halo: [1.0, 0.92, 0.78, 0.035, 0.55], lum: 1 },
   pamant:  { tex: 'pamant',  fr: 0.4215, inc: 12,    axa: 14,    fe: 0,      lon: 25,  rot: 90,   spin: 4.0,  minn: 0.86, atm: A(0.50, 0.72, 1.0, 0.34), halo: [0.45, 0.66, 1.0, 0.03, 0.5], lum: 1, clouds: 'nori', cloudSpin: 0.7 },
@@ -95,7 +96,25 @@ void sun(vec2 px) {
     res = vec4(p.rgb * a, a);
   }
   if (r < 1.0 + 1.5 / uR) {
-    vec3 col = uHas > 0.5 ? tex2(uT0, uT1, du, ddx, ddy).rgb : uFlat * (1.0 - 0.3 * r * r);
+    // rotația (PROMPT-15): discul SDO e emisfera văzută; emisfera din spate e oglindirea ei față de limb (continuă).
+    // Întunecarea spre margine din imagine se scoate (profilul măsurat pe textură, pe canale) și se pune la loc după unghiul
+    // din care privim, ca petele să se rotească fără ca marginea să se rotească odată cu ele.
+    vec2 qq = q / max(1.0, r);
+    float Xs = qq.x, Ys = -qq.y, Zs = sqrt(max(0.0, 1.0 - Xs * Xs - Ys * Ys));
+    float lat = asin(clamp(Ys, -1.0, 1.0)), lon = atan(Xs, Zs) + uLon;
+    lon = mod(lon + PI, 2.0 * PI) - PI;
+    if (abs(lon) > 0.5 * PI) lon = sign(lon) * PI - lon;
+    float cl = cos(lat), mus = max(cos(lon) * cl, 0.2);
+    vec2 su = 0.5 + vec2(sin(lon) * cl, -sin(lat)) * ${(0.488).toFixed(3)};
+    vec3 col = uHas > 0.5 ? tex2(uT0, uT1, uLon == 0.0 ? du : su, ddx, ddy).rgb : uFlat * (1.0 - 0.3 * r * r);
+    if (uHas > 0.5 && uLon != 0.0) {
+      vec3 m1 = vec3(1.0 - mus), m2 = m1 * m1, m0 = vec3(1.0 - Zs);
+      vec3 ldS = vec3(0.9949, 1.0052, 1.0169) + vec3(0.1383, -0.3515, -1.5166) * m1 + vec3(-0.4472, -0.5332, 0.4715) * m2;
+      vec3 ldV = vec3(0.9949, 1.0052, 1.0169) + vec3(0.1383, -0.3515, -1.5166) * m0 + vec3(-0.4472, -0.5332, 0.4715) * m0 * m0;
+      // lângă cusătură (marginea imaginii SDO, întinsă) se trece în fotosfera liniștită, uniformă după scoaterea întunecării
+      float mraw = cos(lon) * cl;
+      col = mix(vec3(1.0, 0.9529, 0.8392), col / max(ldS, vec3(0.05)), smoothstep(0.22, 0.5, mraw)) * max(ldV, vec3(0.0));
+    }
     // granulația: celule de ~3 pixeli pe ecran (cel mult ~700 pe rază, cât granulele reale), evoluează lent, fără pâlpâire
     float k = min(700.0, uR / 3.0);
     vec3 P = vec3(q * k, uTime * 0.22);

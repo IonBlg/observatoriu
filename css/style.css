@@ -73,11 +73,10 @@ section.pin{position:relative}
 .ltr{display:inline-block;will-change:transform,opacity}
 .cred{position:absolute;right:16px;bottom:12px;z-index:6;margin:0;padding:6px 12px;border-radius:5px;background:rgba(5,4,9,.72);font-size:13px;color:rgba(255,241,221,.9);text-shadow:none;transition:opacity .3s}
 .cred a{color:#FFF1DD;text-decoration:underline}
-#apus .cred{top:86px;bottom:auto} /* în apus: dreapta-sus, sub bara de navigare, departe de titlu și de butonul „Derulează” */
-#calatorie .cred{right:auto;left:max(160px,9vw);max-width:calc(100vw - max(160px,9vw) - 400px)} /* stânga-jos: în dreapta stă contorul */
+#cred-apus{top:86px;bottom:auto} /* în apus: dreapta-sus, sub bara de navigare, departe de titlu și de butonul „Derulează” */
+#cred-render{right:auto;left:max(160px,9vw);max-width:calc(100vw - max(160px,9vw) - 400px)} /* stânga-jos: în dreapta stă contorul */
 .cred.away{opacity:0!important} /* un text sau un cartonaș e prea aproape (sub 24 px) */
 .shade{position:absolute;inset:0;z-index:1;pointer-events:none}
-.ring{position:absolute;left:50%;top:50%;width:200px;height:200px;margin:-100px 0 0 -100px;border-radius:50%;border:1px solid rgba(255,241,221,.55);z-index:3;pointer-events:none}
 .lead{margin:18px 0 0;max-width:460px;font-size:18px;line-height:1.5;opacity:.92}
 .quote{margin:0;font-size:clamp(30px,3.6vw,54px);line-height:1.08}
 /* fără cuvinte singure pe un rând */
@@ -98,7 +97,7 @@ p,.lead,li{text-wrap:pretty}
 .load small{font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.06em;color:rgba(255,241,221,.86)}
 body.locked{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.load .dot{animation:none}.load .orb{transition:none}}
-@media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}#apus .pnl.a1,#apus .pnl.a2{top:44vh!important;bottom:auto!important}#apus .pnl.a3{top:auto!important;bottom:12vh!important}} /* telefon: creditele sunt în subsol (Surse imagini); textele din apus stau jos, sub Soare */
+@media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}.pnl.a1,.pnl.a2{top:44vh!important;bottom:auto!important}.pnl.a3{top:auto!important;bottom:12vh!important}.pnl.a4{top:14vh!important}} /* telefon: creditele sunt în subsol (Surse imagini); textele din apus stau jos, sub Soare */
 @media (max-width:760px){#calatorie .pnl:not(.glass):not(article):not([data-seg])::before{inset:-14vh -48vw}}
 @media (prefers-reduced-motion:reduce){.btn,.sq,.chap a span,.chap a em{transition:none}}
 /* muzica: butonul din bara de sus */
@@ -268,8 +267,8 @@ body.sheet-open{overflow:hidden}
 .skip{position:fixed;left:16px;top:-80px;z-index:70;padding:12px 18px;border-radius:999px;background:var(--gold);color:#140E12!important;font-weight:500;transition:top .2s}
 .skip:focus{top:12px}
 #main:focus{outline:none}
-#apus .lcp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-#apus canvas{opacity:0}#apus canvas.on{opacity:1}
+.stage .lcp{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+#space{opacity:0}
 /* fișa locului: în program, deasupra serilor (PROMPT-11) */
 .loc{margin:26px 0 0}
 .loc .kick{margin:0 0 10px}

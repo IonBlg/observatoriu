@@ -1,14 +1,14 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112001';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112001';
-import { createIntro } from './intro.js?v=2026112001';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112101';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112101';
+import { createIntro, introSunR, introSunEnd, STAR_CZ0 } from './intro.js?v=2026112101';
 import {
-  RM, clamp, ease, seg, lerp, fit, cover, stars, starsPan, sunGlow, drawSun, drawBelt,
+  RM, clamp, ease, seg, lerp, fit, cover, stars, starsPan, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112001';
+} from './journey.js?v=2026112101';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -42,12 +42,18 @@ const sndBtn = document.getElementById('snd');
 let music = null, musicLoad = null, chapterNow = 'pamant';
 try { if (localStorage.getItem('observatoriu-muzica') === '1') { sndBtn.classList.add('armed'); sndBtn.title = 'Muzica era pornită. Apasă ca să cânte din nou.'; } } catch (e) {} // revenire: browserul cere un clic ca să cânte
 sndBtn.addEventListener('click', async () => {
-  if (!music) { musicLoad = musicLoad || import('./music.js?v=2026112001').then((m) => m.init(sndBtn, chapterNow)); music = await musicLoad; }
+  if (!music) { musicLoad = musicLoad || import('./music.js?v=2026112101').then((m) => m.init(sndBtn, chapterNow)); music = await musicLoad; }
   music.toggle();
 });
 
 // ---------- math ----------
 function prog(sec) { const b = sec.getBoundingClientRect(), span = b.height - innerHeight; return span > 0 ? clamp(-b.top / span, 0, 1) : 0; }
+// o singură scenă (PROMPT-15): primele XA vh din #calatorie sunt apusul și urcarea (qa), restul e drumul (qj, ca înainte)
+const XA = 470, AP = 300 / 470;   // apusul + noaptea: 300 vh · urcarea: 170 vh
+function progAll() {
+  const b = jSec.getBoundingClientRect(), H = innerHeight, off = -b.top, xa = XA * H / 100, js = b.height - xa - H;
+  return [clamp(off / xa, 0, 1), js > 0 ? clamp((off - xa) / js, 0, 1) : 0];
+}
 function visible(sec) { const b = sec.getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0; }
 function panels(list, p) {
   list.forEach((el) => {
@@ -74,14 +80,13 @@ function* layoutSteps(W, H) {
   mwEnd();
   const groups = new Map();
   jPnls.forEach((el) => {
-    const d = el.dataset, k = d.seg ? 'seg' : d.leg ? 'leg:' + d.leg : d.stop + ':' + (d.part || '');
+    const d = el.dataset, k = d.leg ? 'leg:' + d.leg : d.stop + ':' + (d.part || '');
     if (d.at != null) { const B = ACT.find((s) => s.key === d.stop); if (B) d.at = B.side > 0 ? 'l' : 'r'; } // textul stă în partea opusă planetei
     if (!groups.has(k)) groups.set(k, []); groups.get(k).push(el);
   });
   for (const [k, list] of groups) {
     let A, B;
-    if (k === 'seg') { A = 0; B = segOf('ocular').b; }
-    else if (k.startsWith('leg:')) { const g = segOf('leg', k.slice(4)); A = g.a + PAD; B = g.b - PAD; }
+    if (k.startsWith('leg:')) { const g = segOf('leg', k.slice(4)); A = g.a + PAD; B = g.b - PAD; }
     else if (k === 'soare:') { const g = segOf('sun'); A = g.a + PAD; B = g.b - PAD; }
     else { const V = VIS[k.slice(0, -1)]; if (!V) continue; A = V.a + PAD; B = V.b - PAD; }
     const L = (B - A - GAP * (list.length - 1)) / list.length;
@@ -94,9 +99,8 @@ function* layoutSteps(W, H) {
 }
 
 // ---------- elements ----------
-const apusSec = document.getElementById('apus'), apusCv = apusSec.querySelector('canvas'), apusPnls = [...apusSec.querySelectorAll('.pnl')];
-const jSec = document.getElementById('calatorie'), space = document.getElementById('space'), lens = jSec.querySelector('.lens'), ring = jSec.querySelector('.ring');
-const jPnls = [...jSec.querySelectorAll('.pnl')];
+const jSec = document.getElementById('calatorie'), stage = jSec.querySelector('.stage'), space = document.getElementById('space');
+const apusPnls = [...stage.querySelectorAll('.pnl.ip')], jPnls = [...stage.querySelectorAll('.pnl:not(.ip)')];
 const credRender = document.getElementById('cred-render'), credRenderT = document.getElementById('cred-render-t');
 const CRED = {
   pamant: 'Pământul: randat din hărțile <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble Next Generation</a> și Blue Marble: Clouds, NASA Earth Observatory · domeniu public',
@@ -115,7 +119,7 @@ const CRED = {
 const clockEl = document.getElementById('clock'), barEl = document.getElementById('bar');
 const letters = [...document.querySelectorAll('#title .ltr')], cue = document.getElementById('cue'), titleKick = document.getElementById('titleKick');
 const navEl = document.querySelector('.nav'), chapEl = document.querySelector('.chap'), chapLinks = [...chapEl.querySelectorAll('a')];
-const credApus = apusSec.querySelector('.cred'), finSec = document.getElementById('final'), progSec = document.getElementById('program');
+const credApus = document.getElementById('cred-apus'), finSec = document.getElementById('final'), progSec = document.getElementById('program');
 const pillNav = document.getElementById('pillNav'), pillT = document.getElementById('pillT'), pillN = document.getElementById('pillN');
 const sheet = document.getElementById('sheet'), sheetBg = document.getElementById('sheetBg'), sheetList = document.getElementById('sheetList');
 // creditul de lângă imagine se ascunde cât un text sau un cartonaș vizibil e la mai puțin de 24 px de el
@@ -132,14 +136,15 @@ function credGuard(el, list) {
 const vid = document.getElementById('vid');
 // ancorele cuprinsului: la primul panou al fiecărei opriri active
 function placeAnchors() {
-  const span = jSec.offsetHeight - innerHeight;
+  const xa = XA * innerHeight / 100, span = jSec.offsetHeight - innerHeight - xa;
   jSec.querySelectorAll('.anchor').forEach((a) => {
+    if (a.id === 'apus') return;
     const p = ACT.some((s) => s.key === a.id) && jPnls.find((el) => el.dataset.stop === a.id);
-    a.style.top = Math.round((p ? Math.max(0, +p.dataset.a - 0.004) : 0) * span) + 'px';
+    a.style.top = Math.round(xa + (p ? Math.max(0, +p.dataset.a - 0.004) : 0) * span) + 'px';
   });
 }
 const hm = (m) => { m = Math.round(m) % 1440; const h = Math.floor(m / 60), mm = m % 60; return (h < 10 ? '0' : '') + h + ':' + (mm < 10 ? '0' : '') + mm; };
-jSec.style.height = Math.round(TOTAL + 100) + 'vh'; // lungimea drumului vine din lista de opriri
+jSec.style.height = Math.round(XA + TOTAL + 100) + 'vh'; // apusul și urcarea + lungimea drumului (din lista de opriri)
 
 // ---------- 2. contorul de călătorie: distanța medie de la Soare, din au ----------
 const AU_KM = 149597871, AU_S = 499; // 1 au în km și în secunde-lumină
@@ -195,14 +200,14 @@ function onPtr(e) {
   if (revealed) req();
 }
 addEventListener('pointermove', onPtr, { passive: true });
-jSec.addEventListener('pointerdown', onPtr, { passive: true });
+stage.addEventListener('pointerdown', onPtr, { passive: true });
 const ptrEnd = (e) => { if (ptr && ptr.touch) { ptr = null; req(); } };
 addEventListener('pointerup', ptrEnd); addEventListener('pointercancel', ptrEnd);
 document.documentElement.addEventListener('pointerleave', () => { ptr = null; req(); });
-jSec.addEventListener('contextmenu', (e) => { if (loupeShown) e.preventDefault(); });
+stage.addEventListener('contextmenu', (e) => { if (loupeShown) e.preventDefault(); });
 // cât lupa e activă, contorul din dreapta-jos se ascunde (lupa și eticheta ei nu stau niciodată peste el)
 function loupeHide() {
-  if (loupeShown) { loupeShown = false; loupeEl.classList.remove('on'); hudEl.classList.remove('lupa'); jSec.querySelector('.stage').style.cursor = ''; }
+  if (loupeShown) { loupeShown = false; loupeEl.classList.remove('on'); hudEl.classList.remove('lupa'); stage.style.cursor = ''; }
   if (tagShown !== -1) { tagShown = -1; tagEl.classList.remove('on'); }
 }
 function loupeUpdate(u) {
@@ -225,7 +230,7 @@ function loupeUpdate(u) {
     c.strokeStyle = 'rgba(242,196,141,.7)'; c.lineWidth = 1.2 * d; c.beginPath(); c.arc(ax, ay, 8 * d, 0, 7); c.stroke();
   }
   loupeEl.style.transform = 'translate(' + lx.toFixed(1) + 'px,' + ly.toFixed(1) + 'px)';
-  if (!loupeShown) { loupeShown = true; loupeEl.classList.add('on'); hudEl.classList.add('lupa'); if (!ptr.touch) jSec.querySelector('.stage').style.cursor = 'none'; }
+  if (!loupeShown) { loupeShown = true; loupeEl.classList.add('on'); hudEl.classList.add('lupa'); if (!ptr.touch) stage.style.cursor = 'none'; }
   // eticheta: zona cea mai apropiată (relativ la mărimea ei) în care se află centrul lentilei
   const qx = dx / m.r, qy = dy / m.r;
   let hit = -1, best = 1;
@@ -385,6 +390,7 @@ function texPlan(u) {
   G.plan(i, { jump: i >= 0 && !G.ready(TEX_ORDER[i]) });
 }
 onFirstMove(() => {
+  if (intro) intro.loadGlobal(); else setTimeout(() => intro && intro.loadGlobal(), 3000);   // harta globală a luminilor: pentru urcare, nu la deschidere
   const go = () => { if (globes()) { texIdxNow = -2; texPlan(qj); G.loadAllMic(); } }; // hărțile mici (~120 KB toate): rezerva pentru un salt direct
   'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 1500 }) : setTimeout(go, 300);
 });
@@ -394,46 +400,49 @@ function frame() {
   const now = performance.now(), dt = spinLast ? Math.min(0.1, (now - spinLast) / 1000) : 0; spinLast = 0;
   let spinning = false, introAnim = false;
   const H = innerHeight, W = innerWidth, k = RM ? 1 : 0.13;
-  const ta = prog(apusSec), tj = prog(jSec);
+  const [ta, tj] = progAll();
   qa += (ta - qa) * k; if (Math.abs(ta - qa) < 0.0002) qa = ta;
   qj += (tj - qj) * k; if (Math.abs(tj - qj) < 0.00005) qj = tj;
   if (qa !== ta || qj !== tj) req();
   barEl.style.transform = 'scaleX(' + clamp(scrollY / (document.documentElement.scrollHeight - H), 0, 1).toFixed(4) + ')';
+  const pa = Math.min(1, qa / AP), ra = clamp((qa - AP) / (1 - AP), 0, 1);   // apusul (0..1) · urcarea (0..1)
+  const inJ = qj > 0, live = !!(intro && intro.ready());
+  // preluarea: în primele ~20 vh ale drumului, cadrul intro-ului se stinge peste cel al călătoriei (aceeași scenă, același canvas)
+  const XJ = 0.003, kI = !live ? 0 : !inJ ? 1 : 1 - ease(clamp(qj / XJ, 0, 1));
 
-  // APUS: randat live (intro.js), în contextul WebGL al globurilor; până la primul cadru se vede imaginea statică de sub canvas
-  if (visible(apusSec)) {
-    if (intro && intro.ready()) {
-      const [w, h] = fit(apusCv), c = apusCv.getContext('2d', { alpha: false });
-      if (intro.draw(c, w, h, qa, introT)) {
-        if (!apusCv._on) { apusCv._on = 1; apusCv.classList.add('on'); }
-        if (!RM && !document.hidden) introAnim = true;   // Pământul „curge” foarte încet: desenăm continuu cât se vede
-      }
-    }
-    const kk = RM ? 0 : Math.min(1, qa / 0.3);
-    letters.forEach((el, i) => { const d = (i % 2 ? 1 : -1) * (1 + i % 3); el.style.transform = 'translate(' + (d * kk * 18).toFixed(1) + 'px,' + (-kk * (40 + (i * 37) % 160)).toFixed(1) + 'px) rotate(' + (d * kk * 6).toFixed(1) + 'deg)'; el.style.opacity = (1 - kk).toFixed(3); });
-    cue.style.opacity = Math.max(0, 1 - qa / 0.06).toFixed(3);
+  // textele apusului
+  {
+    // mișcare redusă: literele nu zboară, doar se sting (scena e aceeași până la final, titlul nu are voie să rămână)
+    const kk = Math.min(1, pa / 0.3), km = RM ? 0 : kk;
+    letters.forEach((el, i) => { const d = (i % 2 ? 1 : -1) * (1 + i % 3); el.style.transform = 'translate(' + (d * km * 18).toFixed(1) + 'px,' + (-km * (40 + (i * 37) % 160)).toFixed(1) + 'px) rotate(' + (d * km * 6).toFixed(1) + 'deg)'; el.style.opacity = (1 - kk).toFixed(3); });
+    cue.style.opacity = Math.max(0, 1 - pa / 0.06).toFixed(3);
     titleKick.style.opacity = Math.max(0, 1 - kk / 0.5).toFixed(3); // dispare înaintea literelor, ca să nu stea sub textul următor
     panels(apusPnls, qa);
   }
+  // canvasul: cu intro live se vede de la primul cadru desenat; fără el (fără WebGL, mișcare redusă), imaginea statică se
+  // estompează în cadrul călătoriei spre sfârșitul urcării (aceeași scenă, fără graniță)
+  const op = live && space._live ? 1 : inJ ? 1 : (ready ? ease(seg(ra, 0.55, 1)) : 0);
+  if (space._op !== op) { space._op = op; space.style.opacity = op.toFixed(3); }
 
-  // CĂLĂTORIA
+  // CĂLĂTORIA (și preluarea)
   if (!visible(jSec)) { hudUpdate(0, false); loupeUpdate(-1); }
   if (visible(jSec) && ready) {
     const u = qj;
-    texPlan(u);
-    // ocular
-    const e = ease(seg(u, 0, segOf('ocular').b));
-    const r0 = Math.min(W, H) * 0.17, r1 = Math.hypot(W, H) / 2 + 10, rad = r0 + (r1 - r0) * e;
-    const cp = e >= 0.999 ? 'none' : 'circle(' + rad.toFixed(1) + 'px at 50% 50%)';
-    if (lens.style.clipPath !== cp) lens.style.clipPath = cp;
-    ring.style.transform = 'scale(' + (rad / 100).toFixed(3) + ')'; ring.style.opacity = (1 - e).toFixed(3);
-
+    if (inJ) texPlan(u);
+    const drawJ = inJ || (!live && ra > 0.5);
+    const [w, h] = fit(space), c = space.getContext('2d', { alpha: false });
+    if (kI > 0) {
+      // intro-ul (apus, noapte, urcare): desenat continuu (Pământul „curge”); peste călătorie în timpul preluării
+      if (drawJ && kI < 1) dirty = true;
+      else if (live) {
+        if (intro.draw(c, w, h, pa, introT, { a: ra })) { if (!space._live) { space._live = 1; space._op = -1; } if (!RM && !document.hidden) introAnim = true; }
+      }
+    }
     panels(jPnls, u);
     const key = u.toFixed(5) + ':' + W + 'x' + H;
-    if (key !== lastKey || dirty) {
+    if (drawJ && (key !== lastKey || dirty)) {
       lastKey = key; dirty = false;
       if (!PATH || PATH.W !== W || PATH.H !== H) { layoutPanels(W, H); placeAnchors(); }
-      const [w, h] = fit(space), c = space.getContext('2d', { alpha: false });
       c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; // micșorare curată, fără zimți
       const dpr = w / W, cam = camera(u);
       distCheck(u, cam);
@@ -441,22 +450,30 @@ function frame() {
       moonScr = null;
       // Soarele (și prin ocular): desenat live din imaginea SDO; granulația și protuberanțele se mișcă lent, deci desenăm continuu
       const sunDraw = (cc, x, y, D, al) => {
-        const r = G && !G.lost ? G.draw(cc, 'soare', x, y, D, w, h, { alpha: al, time: RM ? 0 : spinT, dot: '#F4B356' }) : false;
+        const r = G && !G.lost ? G.draw(cc, 'soare', x, y, D, w, h, { alpha: al, time: RM ? 0 : spinT, ang: angleOf('soare', seg(u, segOf('sun').a, segOf('turn').b), spinT, RM), dot: '#F4B356' }) : false;
         if (r && !RM) spinning = true;
         if (!r && (!G || G.lost)) { const im = staticOf('soare'), S2 = D / (2 * BODIES.soare.fr); if (im) { cc.globalAlpha = al; cc.drawImage(im, x - S2 / 2, y - S2 / 2, S2, S2); cc.globalAlpha = 1; return true; } }
         return r;
       };
       if (cam.scene === 'sun' || cam.scene === 'turn') {
-        // SOARELE: prin ocular, mic și strălucitor; apoi mare, în partea lui; apoi camera se întoarce și pornește spre exterior
+        // SOARELE, o oprire ca planetele: de departe un disc alb cu strălucire (exact cât era la sfârșitul urcării), care crește
+        // și alunecă în partea lui; de aproape globul live (SDO); apoi camera trece pe lângă el și pornește spre Mercur
         const hs = PATH.home(SUN), Rh = PATH.tgt() / 2 * (cam.g.type === 'sun' ? 1 + 0.05 * cam.t : cam.g.type === 'turn' ? 1.05 : 1);
-        const R = lerp(r0 * 0.62, Rh, e) * dpr, cx = (W / 2 + hs[0] * e) * dpr, cy = (H / 2 + hs[1] * e) * dpr;
-        if (cam.scene === 'sun') { stars(c, w, h, 0, 1); drawSun(c, cx, cy, R, 1, sunDraw); }
-        else {
-          const p = ease(cam.t), spd = RM ? 0 : Math.sin(Math.PI * cam.t);
-          starsPan(c, w, h, p * 0.9, spd, 1 - ease(seg(cam.t, 0.7, 1)));
-          stars(c, w, h, 0, ease(seg(cam.t, 0.7, 1)));
-          drawSun(c, cx - p * (w * 0.55 + R * 1.6), cy, R, 1 - ease(seg(cam.t, 0.45, 0.9)), sunDraw);
-          sunGlow(c, w, h, 0.22 * ease(seg(cam.t, 0.5, 1)));
+        if (cam.g.type === 'approach') {
+          const g = ease(cam.t), R0 = intro ? intro.sunR(W, H) : introSunR(W, H, SET === 'm');
+          const Rc = R0 * Math.pow(Rh / R0, g), kk = ease(clamp((Rc / Rh - 0.12) / 0.6, 0, 1)), se = introSunEnd(W, H, SET === 'm');
+          stars(c, w, h, STAR_CZ0 + 5 * g, 1);   // mergem înainte: stelele se depărtează de centru, ca în restul drumului
+          drawSunFar(c, lerp(se[0], W / 2 + hs[0], kk) * dpr, lerp(se[1], H / 2 + hs[1], kk) * dpr, Rc * dpr, R0 * dpr, Rc, sunDraw, intro ? intro.sunF(W, H) * dpr : Math.min(W, H) * dpr);
+        } else {
+          const R = Rh * dpr, cx = (W / 2 + hs[0]) * dpr, cy = (H / 2 + hs[1]) * dpr;
+          if (cam.scene === 'sun') { stars(c, w, h, STAR_CZ0 + 5, 1); drawSun(c, cx, cy, R, 1, sunDraw); }
+          else {
+            const p = ease(cam.t), spd = RM ? 0 : Math.sin(Math.PI * cam.t);
+            starsPan(c, w, h, p * 0.9, spd, 1 - ease(seg(cam.t, 0.7, 1)));
+            stars(c, w, h, 0, ease(seg(cam.t, 0.7, 1)));
+            drawSun(c, cx - p * (w * 0.55 + R * 1.6), cy, R, 1 - ease(seg(cam.t, 0.45, 0.9)), sunDraw);
+            sunGlow(c, w, h, 0.22 * ease(seg(cam.t, 0.5, 1)));
+          }
         }
       } else {
         stars(c, w, h, cam.P[2], 1, -cam.yaw * PATH.f * dpr, -cam.pitch * PATH.f * dpr); // rotirea camerei mută cerul
@@ -491,24 +508,26 @@ function frame() {
         if (PATH.belt.length) drawBelt(c, cam, w, h, dpr, u);
       }
     }
+    if (drawJ && live && kI > 0 && kI < 1) { if (intro.draw(c, w, h, pa, introT, { a: ra, alpha: kI })) introAnim = true; }
     loupeUpdate(u);
     const jr = jSec.getBoundingClientRect();
     hudUpdate(u, jr.top <= 1 && jr.bottom >= H - 1 && u > 0.01);
     const st = stopAt(u).key, cr = (G && G.lost ? CRED[st + '_svs'] : '') || CRED[st] || '';
     if (credRender._k !== cr) { credRender._k = cr; credRenderT.innerHTML = cr; }
-    credRender.style.opacity = cr ? 1 : 0;
+    credRender.style.opacity = cr && inJ ? 1 : 0;
     credGuard(credRender, jPnls);
     const pOn = jr.top <= 1 && jr.bottom >= H - 1 && u > 0.01;
     if (pillNav._on !== pOn) { pillNav._on = pOn; pillNav.classList.toggle('on', pOn); }
   } else if (pillNav._on) { pillNav._on = false; pillNav.classList.remove('on'); }
-  if (visible(apusSec)) credGuard(credApus, apusPnls);
+  { const co = qa < 0.98 ? '' : '0'; if (credApus.style.opacity !== co) credApus.style.opacity = co; }
+  if (qa < 0.98) credGuard(credApus, apusPnls);
 
-  // ceasul (seară fictivă: apus 19:12 → 20:52, drumul 21:00 → 01:00, fără salturi înapoi) + cuprinsul
+  // ceasul (seară fictivă: apus 19:12 → 21:00, drumul 21:00 → 02:00, fără salturi) + cuprinsul
   let clk;
-  if (qj > 0) clk = 21 * 60 + qj * 300; else clk = 19 * 60 + 12 + qa * 100;
+  if (qj > 0) clk = 21 * 60 + qj * 300; else clk = 19 * 60 + 12 + qa * 108;   // apus 19:12 → 21:00 (sfârșitul urcării), fără salt
   const ct = hm(clk); if (clockEl.textContent !== ct) clockEl.textContent = ct;
   let cur = 'apus';
-  if (qj > 0 || jSec.getBoundingClientRect().top <= H * 0.5) cur = stopAt(qj).key;
+  if (qj > 0) cur = stopAt(qj).key;
   if (finSec.getBoundingClientRect().top <= H * 0.5) cur = 'final';
   { const pr = progSec.getBoundingClientRect(); if (pr.top <= H * 0.5 && pr.bottom > H * 0.5) cur = 'program'; }
   { const solid = finSec.getBoundingClientRect().top < 84; if (navEl._s !== solid) { navEl._s = solid; navEl.classList.toggle('solid', solid); } }
@@ -540,7 +559,7 @@ if (vid && 'IntersectionObserver' in window) {
 // data din titlul cardului se pune de la început (același text ca în sky.js), ca înălțimea cardului să nu se schimbe când sosește calculul
 try { document.getElementById('skyDate').textContent = ('Chișinău · ' + new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Chisinau' }) + ' · ora 21:00').toLocaleUpperCase('ro-RO'); } catch (e) {}
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112001').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112101').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else askSky();
 if (DEBUG) window.__obs = { stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();

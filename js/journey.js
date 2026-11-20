@@ -1,6 +1,6 @@
 // Călătoria: scena 3D (STOPS), camera, regulile trecerii și desenarea (Soare, planete, inele, asteroizi, stele, Luna).
 // Copiată din previzualizare (V10), doar împărțită pe fișiere.
-import { dims } from './frames.js?v=2026112001';
+import { dims } from './frames.js?v=2026112101';
 
 export const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -37,7 +37,8 @@ export function stars(c, w, h, cz, alpha, ox, oy) {
   ox = ox || 0; oy = oy || 0;
   const WW = w + 80, HH = h + 80, wrap = (v, M) => ((v + 40) % M + M) % M - 40;
   const D = cz * 0.09;
-  if (lastCz != null) vel = vel * 0.8 + Math.abs(cz - lastCz) * 0.2; lastCz = cz;
+  // un salt mare de adâncime (alt segment, un clic în cuprins) nu e viteză: fără dâre
+  if (lastCz != null && Math.abs(cz - lastCz) < 3) vel = vel * 0.8 + Math.abs(cz - lastCz) * 0.2; lastCz = cz;
   const len = clamp((vel - 0.08) * 0.05, 0, 0.09); // streaks only while flying fast
   const cx = w / 2, cy = h / 2, f = Math.max(w, h) * 0.5;
   c.save(); c.globalAlpha = alpha; c.strokeStyle = '#FFF1DD'; c.fillStyle = '#FFF1DD'; c.lineCap = 'round';
@@ -98,7 +99,8 @@ export const NEXT = STOPS[STOPS.indexOf(ACT[ACT.length - 1]) + 1] || null; // sp
 // ---------- firul derulării: segmente în vh, apoi u = 0..1 ----------
 export const SEG = []; export let TOTAL = 0;
 export const push = (type, vh, o) => { SEG.push(Object.assign({ type, vh, a: TOTAL }, o)); TOTAL += vh; };
-push('ocular', 70);
+// PROMPT-15: fără ocular; drumul începe cu apropierea de Soare (preia cadrul de la sfârșitul urcării din intro.js)
+push('approach', 130, { stop: SUN });
 push('sun', SUN.weight * 100, { stop: SUN });
 push('turn', 130, { stop: SUN });
 for (let i = 1; i < ACT.length; i++) {
@@ -195,7 +197,7 @@ export function along(L, s) { // punctul de pe drum la fracția s din lungime
 }
 export function camera(u) {
   const P = PATH, f = P.f, g = segAt(u), t = seg(u, g.a, g.b);
-  if (g.type === 'ocular' || g.type === 'sun') return { scene: 'sun', t, g };
+  if (g.type === 'approach' || g.type === 'sun') return { scene: 'sun', t, g };
   if (g.type === 'turn') return { scene: 'turn', t, g };
   const C = (pos, o, roll, scene) => ({ scene: scene || 'space', t, g, P: pos, yaw: o.yaw, pitch: o.pitch, roll: roll || 0 });
   const lookAt = (pos, tp, off) => look(vsub(tp, pos), off[0], off[1], f);
@@ -283,6 +285,28 @@ export function drawSun(c, cx, cy, R, alpha, draw) {
   const r = draw ? draw(c, cx, cy, 2 * R, alpha) : false;
   if (!r) { c.save(); c.globalAlpha = alpha; c.fillStyle = '#F4B356'; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fill(); c.restore(); }
   return r;
+}
+// PROMPT-15: Soarele de departe, ca la sfârșitul urcării din intro.js: disc alb, plat (supraexpus), cu aceeași strălucire în
+// trei straturi (aceleași formule, aceeași expunere), care se transformă lin în globul live pe măsură ce crește.
+// R, R0: raza acum și la preluare (pixeli canvas) · Rcss: raza în pixeli CSS · fpx: distanța focală a intro-ului (pixeli canvas)
+const BLOOM = [0, 0.0015, 0.003, 0.005, 0.008, 0.012, 0.018, 0.027, 0.04, 0.06, 0.09, 0.13, 0.18, 0.24, 0.30, 0.35].map((d) => {
+  const g = 1.3 * Math.exp(-d / 0.0035) + 0.16 * Math.exp(-d / 0.012) + 0.010 * Math.exp(-d / 0.045);
+  let m = Math.pow(1 - Math.exp(-g * 2.8), 1 / 2.2); m += (m * m * (3 - 2 * m) - m) * 0.35;
+  return [d / 0.35, m];
+});
+export function drawSunFar(c, cx, cy, R, R0, Rcss, draw, fpx) {
+  const wTex = ease(seg(Rcss, 5, 28)), grow = R / Math.max(R0, 1e-3), bk = 1 - ease(seg(grow, 2.5, 14));
+  if (wTex > 0) drawSun(c, cx, cy, R, wTex, draw);
+  if (wTex < 1) {
+    c.save(); c.globalAlpha = 1 - wTex; c.fillStyle = '#FFFCF6';
+    c.beginPath(); c.arc(cx, cy, Math.max(R, 0.7), 0, Math.PI * 2); c.fill(); c.restore();
+  }
+  if (bk > 0) {
+    const rad = 0.35 * fpx * Math.sqrt(grow), g = c.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    for (const [t, m] of BLOOM) g.addColorStop(t * 0.97, 'rgba(255,250,242,' + (m * bk * 0.9).toFixed(4) + ')');
+    g.addColorStop(1, 'rgba(255,250,242,0)');   // marginea pătratului: complet transparentă
+    c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = g; c.fillRect(cx - rad, cy - rad, 2 * rad, 2 * rad); c.restore();
+  }
 }
 // centura de asteroizi: fiecare piatră e un poligon neregulat, luminat din aceeași direcție (stânga-sus), discret
 export function drawBelt(c, cam, w, h, dpr, u) {
