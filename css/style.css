@@ -278,3 +278,9 @@ body.sheet-open{overflow:hidden}
 .loc dt{font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.06em;color:rgba(255,241,221,.86)}
 .loc dd{margin:2px 0 0;font-size:17px;font-weight:500}
 @media (max-width:560px){.loc dl{grid-template-columns:repeat(2,minmax(0,1fr))}.loc dl div:nth-child(3){padding-left:0;border-left:0}.loc dl div:nth-child(n+3){border-top:1px solid rgba(255,241,221,.12)}}
+
+/* PROMPT-16: numele piesei, la schimbare (3,5 s) */
+.trk{margin:0;padding:5px 10px;border-radius:5px;background:rgba(5,4,9,.78);color:#FFF1DD;font-size:12px;letter-spacing:.06em;white-space:nowrap;opacity:0;transition:opacity .45s;pointer-events:none;text-shadow:none}
+.trk.on{opacity:1}
+@media (max-width:760px){.trk{position:fixed;top:64px;right:16px}}
+@media (prefers-reduced-motion:reduce){.trk{transition:none}}

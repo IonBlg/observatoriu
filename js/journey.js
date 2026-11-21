@@ -1,6 +1,6 @@
 // Călătoria: scena 3D (STOPS), camera, regulile trecerii și desenarea (Soare, planete, inele, asteroizi, stele, Luna).
 // Copiată din previzualizare (V10), doar împărțită pe fișiere.
-import { dims } from './frames.js?v=2026112101';
+import { dims } from './frames.js?v=2026112201';
 
 export const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -28,32 +28,100 @@ export function globe(c, im, cx, cy, size, rad, alpha) {
   c.drawImage(im, cx - size / 2, cy - size / 2, size, size);
   c.restore();
 }
-// stars: deterministic from scroll position, streak while travelling fast
+// ---------- PROMPT-16: cerul ----------
+// Stelele stau pe o sferă cerească (infinit de departe): fiecare are o direcție fixă în lumea călătoriei (x dreapta, y în jos,
+// z înainte) și se proiectează doar cu orientarea camerei (yaw, pitch), fără poziția ei: pe zborul drept stau pe loc, la
+// întoarceri se rotesc toate împreună. Fără „wrap”, fără dâre. Mărimea și luminozitatea, ca înainte: z = „depărtarea” veche
+// (aceeași distribuție ca stelele vizibile de odinioară), sz = (1 − z) · 1,8 + 0,4 px, alfa = b · min(1, (1 − z) · 1,6 + 0,2).
+// Același cer și în intro (intro.js îl desenează în WebGL, cu aceeași proiecție) și la Soare.
 export const STARS = []; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-for (let i = 0; i < 520; i++) STARS.push({ x: rnd() * 2 - 1, y: rnd() * 2 - 1, z: rnd(), b: 0.35 + rnd() * 0.65 });
-export let lastCz = null, vel = 0;
-export function stars(c, w, h, cz, alpha, ox, oy) {
+for (let i = 0; i < 520; i++) STARS.push({ x: rnd() * 2 - 1, y: rnd() * 2 - 1, z: rnd(), b: 0.35 + rnd() * 0.65 });   // (vechiul set, păstrat pentru compatibilitate)
+export const SKY_N = 4700;
+export const SKY = (() => {   // x, y, z (direcția), mărimea (px), alfa
+  const a = new Float32Array(SKY_N * 5); let sd = 11; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  // distribuția lui z la stelele vizibile pe vechiul ecran: ∝ min(1, 2,86 z) · min(1, 1,7 z)
+  const wz = (z) => Math.min(1, 2.86 * z) * Math.min(1, 1.7 * z);
+  for (let i = 0; i < SKY_N; i++) {
+    const u = r() * 2 - 1, t = r() * Math.PI * 2, q = Math.sqrt(1 - u * u);
+    let z; do { z = r(); } while (r() > wz(z));
+    const b = 0.35 + r() * 0.65;
+    a.set([q * Math.cos(t), u, q * Math.sin(t), (1 - z) * 1.8 + 0.4, b * Math.min(1, (1 - z) * 1.6 + 0.2)], i * 5);
+  }
+  return a;
+})();
+// pe telefon cerul cuprinde mai mult pe verticală: o parte din stele, ca densitatea să rămână cea de acum
+export const skyCount = (mobile) => Math.round(SKY_N * (mobile ? 0.55 : 1));
+/** Desenează stelele: o = { yaw, pitch } (radiani), f = distanța focală (pixeli canvas), alpha global. */
+export function drawSky(c, w, h, o, f, alpha, mobile) {
   if (alpha <= 0) return;
-  ox = ox || 0; oy = oy || 0;
-  const WW = w + 80, HH = h + 80, wrap = (v, M) => ((v + 40) % M + M) % M - 40;
-  const D = cz * 0.09;
-  // un salt mare de adâncime (alt segment, un clic în cuprins) nu e viteză: fără dâre
-  if (lastCz != null && Math.abs(cz - lastCz) < 3) vel = vel * 0.8 + Math.abs(cz - lastCz) * 0.2; lastCz = cz;
-  const len = clamp((vel - 0.08) * 0.05, 0, 0.09); // streaks only while flying fast
-  const cx = w / 2, cy = h / 2, f = Math.max(w, h) * 0.5;
-  c.save(); c.globalAlpha = alpha; c.strokeStyle = '#FFF1DD'; c.fillStyle = '#FFF1DD'; c.lineCap = 'round';
-  for (const s of STARS) {
-    let z = s.z - (D % 1); if (z <= 0.02) z += 1;
-    const x0 = cx + s.x / z * f * 0.35, y0 = cy + s.y / z * f * 0.35, x = wrap(x0 + ox, WW), y = wrap(y0 + oy, HH);
-    if (x0 < -40 || x0 >= w + 40 || y0 < -40 || y0 >= h + 40 || x < -20 || x > w + 20 || y < -20 || y > h + 20) continue; // aceleași stele ca fără rotire, deplasate ciclic
-    const sz = (1 - z) * 1.8 + 0.4;
-    c.globalAlpha = alpha * s.b * Math.min(1, (1 - z) * 1.6 + 0.2);
-    if (len > 0.004) {
-      const z2 = z + len, x2 = x + cx + s.x / z2 * f * 0.35 - x0, y2 = y + cy + s.y / z2 * f * 0.35 - y0;
-      c.lineWidth = sz; c.beginPath(); c.moveTo(x2, y2); c.lineTo(x, y); c.stroke();
-    } else c.fillRect(x - sz / 2, y - sz / 2, sz, sz);
+  const cy = Math.cos(o.yaw), sy = Math.sin(o.yaw), cp = Math.cos(o.pitch), sp = Math.sin(o.pitch), n = skyCount(mobile);
+  const hw = w / 2, hh = h / 2, zmin = 0.2;
+  c.save(); c.fillStyle = '#FFF1DD';
+  for (let i = 0; i < n; i++) {
+    const k = i * 5, x = SKY[k], y = SKY[k + 1], z = SKY[k + 2];
+    const x1 = x * cy - z * sy, z1 = x * sy + z * cy, Z = y * sp + z1 * cp;
+    if (Z < zmin) continue;
+    const Y = y * cp - z1 * sp, X = hw + f * x1 / Z, Yy = hh + f * Y / Z;
+    if (X < -3 || X > w + 3 || Yy < -3 || Yy > h + 3) continue;
+    const sz = SKY[k + 3];
+    c.globalAlpha = alpha * SKY[k + 4]; c.fillRect(X - sz / 2, Yy - sz / 2, sz, sz);
   }
   c.restore();
+}
+/** Proiecția unei direcții (lume) pe ecran cu orientarea o; null = în spate. */
+export function skyProject(d, o, f, w, h) {
+  const cy = Math.cos(o.yaw), sy = Math.sin(o.yaw), cp = Math.cos(o.pitch), sp = Math.sin(o.pitch);
+  const x1 = d[0] * cy - d[2] * sy, z1 = d[0] * sy + d[2] * cy, Z = d[1] * sp + z1 * cp, Y = d[1] * cp - z1 * sp;
+  return Z > 0.01 ? [w / 2 + f * x1 / Z, h / 2 + f * Y / Z] : null;
+}
+// ---------- „praful cosmic”: particule mici în spațiul 3D din jurul camerei (un cub care se repetă), doar în mișcare ----------
+// Spațiul prafului se mută cu deplasarea reală a camerei (direcția ei, viteza măsurată în vh de derulare pe cadru), deci
+// particulele fug singure din punctul spre care zburăm. Un salt (cuprins, clic) nu e viteză: nu mută praful și nu face dâre.
+export function makeDust(n) {
+  let sd = 23; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const L = 1, P = new Float32Array(n * 3), prev = new Float32Array(n * 2), rel0 = new Float32Array(n * 3), ok = new Uint8Array(n), tone = new Float32Array(n);
+  for (let i = 0; i < n; i++) { P[i * 3] = r() * L; P[i * 3 + 1] = r() * L; P[i * 3 + 2] = r() * L; tone[i] = 0.35 + 0.65 * r() * r(); }
+  const D = { n, L, P, prev, rel0, ok, tone, pos: [0, 0, 0], vp: null, speed: 0, arrows: [] };
+  /** Mută spațiul prafului: dir = direcția mișcării (lume), s = vh de derulare pe cadru (cu semn ±1 în dir). jump = salt. */
+  D.move = (dir, s, jump) => {
+    if (jump) { ok.fill(0); D.speed = 0; return; }
+    const k = 0.05 * s; D.pos[0] += dir[0] * k; D.pos[1] += dir[1] * k; D.pos[2] += dir[2] * k;
+    D.speed = D.speed * 0.7 + Math.abs(s) * 0.3;
+  };
+  /** Desenează praful: o = orientarea camerei, f = distanța focală (pixeli canvas), dpr, dir = direcția mișcării (pentru ?debug). */
+  D.draw = (c, w, h, o, f, dpr, dir, debug) => {
+    const vis = ease(seg(D.speed, 0.12, 1.4));   // vizibil doar în mișcare: la oprire aproape dispare
+    D.arrows = [];
+    if (vis <= 0.004 && !debug) { ok.fill(0); return; }
+    const cy = Math.cos(o.yaw), sy = Math.sin(o.yaw), cp = Math.cos(o.pitch), sp = Math.sin(o.pitch), hw = w / 2, hh = h / 2;
+    const fast = D.speed > 0.7, maxL = 34 * dpr, H = L / 2;
+    c.save(); c.lineCap = 'round';
+    for (let i = 0; i < n; i++) {
+      let x = P[i * 3] - D.pos[0], y = P[i * 3 + 1] - D.pos[1], z = P[i * 3 + 2] - D.pos[2];
+      x -= Math.floor(x / L + 0.5) * L; y -= Math.floor(y / L + 0.5) * L; z -= Math.floor(z / L + 0.5) * L;
+      const wrapped = Math.abs(x - rel0[i * 3]) > H || Math.abs(y - rel0[i * 3 + 1]) > H || Math.abs(z - rel0[i * 3 + 2]) > H;
+      rel0[i * 3] = x; rel0[i * 3 + 1] = y; rel0[i * 3 + 2] = z;
+      const x1 = x * cy - z * sy, z1 = x * sy + z * cy, Z = y * sp + z1 * cp;
+      if (Z < 0.04) { ok[i] = 0; continue; }
+      const Y = y * cp - z1 * sp, X = hw + f * x1 / Z, Yy = hh + f * Y / Z;
+      const dist = Math.hypot(x, y, z), near = clamp(1 - dist / H, 0, 1);
+      const a = vis * (0.3 + 0.55 * near) * tone[i];
+      if (X > -40 && X < w + 40 && Yy > -40 && Yy < h + 40 && a > 0.003) {
+        const sz = (0.7 + 1.1 * near) * dpr;
+        c.globalAlpha = a;
+        if (fast && ok[i] && !wrapped) {   // dâră scurtă, de-a lungul mișcării reale pe ecran, cu lungime limitată
+          let dx = prev[i * 2] - X, dy = prev[i * 2 + 1] - Yy; const len = Math.hypot(dx, dy);
+          if (len > maxL) { dx *= maxL / len; dy *= maxL / len; }
+          c.strokeStyle = '#FFE6C4'; c.lineWidth = sz; c.beginPath(); c.moveTo(X + dx, Yy + dy); c.lineTo(X, Yy); c.stroke();
+        } else { c.fillStyle = '#FFE6C4'; c.fillRect(X - sz / 2, Yy - sz / 2, sz, sz); }
+        if (debug && ok[i] && !wrapped) D.arrows.push([prev[i * 2], prev[i * 2 + 1], X, Yy]);
+      }
+      prev[i * 2] = X; prev[i * 2 + 1] = Yy; ok[i] = 1;
+    }
+    c.restore();
+    D.vp = dir ? skyProject(dir, o, f, w, h) : null;   // punctul spre care zburăm (doar pentru ?debug)
+  };
+  return D;
 }
 
 // ---------- scena 3D: opririle, de la Soare spre exterior (unități: diametre de Pământ; contează doar raporturile) ----------
@@ -211,7 +279,19 @@ export function camera(u) {
   if (L.B) { const S = P.stop[L.B.key], rel = vsub(L.B.pos, pos), k = ease(clamp((f * L.B.D / vlen(rel) / P.tgt(L.B) - 0.2) / 0.6, 0, 1)); oT = look(rel, S.hm[0] * k, S.hm[1] * k, f); }
   else oT = look(vsub(L.Bpos, pos), 0, 0, f);
   // planeta lăsată în urmă: la început încă o privim, apoi ne întoarcem spre țintă
-  const o = L.A ? mixO(lookAt(pos, L.A.pos, L.offA), oT, ease(clamp(tt / L.tau, 0, 1))) : oT;
+  // (PROMPT-16: sensul întoarcerii e cel de la începutul drumului; când privirea înapoi și cea înainte ajung la ~180°,
+  //  calea „cea mai scurtă” s-ar inversa brusc și imaginea ar sări cu zeci de grade)
+  let o = oT;
+  if (L.A) {
+    const oa = lookAt(pos, L.A.pos, L.offA), k = ease(clamp(tt / L.tau, 0, 1));
+    if (L.dref == null) {   // diferența de yaw la începutul drumului (s = 0), o singură dată pe drum
+      const p0 = along(L, 0), a0 = lookAt(p0, L.A.pos, L.offA), S0 = L.B ? P.stop[L.B.key] : null;
+      const t0 = S0 ? look(vsub(L.B.pos, p0), 0, 0, f) : look(vsub(L.Bpos, p0), 0, 0, f);
+      let d0 = t0.yaw - a0.yaw; d0 -= Math.round(d0 / (2 * Math.PI)) * 2 * Math.PI; L.dref = d0;
+    }
+    let d = oT.yaw - oa.yaw; d = L.dref + (d - L.dref) - Math.round((d - L.dref) / (2 * Math.PI)) * 2 * Math.PI;
+    o = { yaw: oa.yaw + d * k, pitch: lerp(oa.pitch, oT.pitch, k) };
+  }
   return C(pos, o);
 }
 // oprirea „curentă” (cuprins, contor, muzică, credite)
@@ -334,19 +414,4 @@ export function sunGlow(c, w, h, a) {
   const r = Math.max(w, h) * 0.95, g = c.createRadialGradient(-w * 0.08, -h * 0.12, 0, -w * 0.08, -h * 0.12, r);
   g.addColorStop(0, 'rgba(255,222,160,' + a.toFixed(3) + ')'); g.addColorStop(0.4, 'rgba(255,190,120,' + (a * 0.3).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,170,100,0)');
   c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore();
-}
-// stele în timpul întoarcerii: se mișcă pe orizontală, cu dâre după viteză
-export function starsPan(c, w, h, pan, speed, alpha) {
-  if (alpha <= 0) return;
-  const W2 = w * 1.5;
-  c.save(); c.strokeStyle = '#FFF1DD'; c.fillStyle = '#FFF1DD'; c.lineCap = 'round';
-  for (const s of STARS) {
-    const depth = 0.35 + 0.65 * (1 - s.z), x = ((((s.x * 0.5 + 0.5) * W2 - pan * W2 * depth) % W2) + W2) % W2 - (W2 - w) / 2, y = (s.y * 0.5 + 0.5) * h;
-    if (x < -40 || x > w + 40) continue;
-    const sz = depth * 1.6 + 0.3, len = speed * w * 0.06 * depth;
-    c.globalAlpha = alpha * s.b * (0.4 + 0.6 * depth);
-    if (len > 1.5) { c.lineWidth = sz; c.beginPath(); c.moveTo(x, y); c.lineTo(x + len, y); c.stroke(); }
-    else c.fillRect(x - sz / 2, y - sz / 2, sz, sz);
-  }
-  c.restore();
 }

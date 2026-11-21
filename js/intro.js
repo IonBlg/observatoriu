@@ -7,10 +7,10 @@
 //   și transmisia pentru fiecare direcție (înălțimea față de limb × unghiul față de Soare); se recalculează doar când
 //   Soarele se mișcă. Pasul pe tot ecranul doar citește din ea, deci e ieftin;
 // - Soarele: disc cu întunecare spre margine și strălucire în trei straturi; e tăiat de Pământ și se înroșește prin atmosferă;
-// - stelele: aceleași ca în restul călătoriei (STARS din journey.js, desenate la fel), apar după apus.
+// - stelele: aceeași sferă cerească ca în restul călătoriei (SKY din journey.js, puncte WebGL), apar după apus.
 // Camera „cover”: cadrul de referință (1920 × 1080 pe calculator, 1000 × 1500 pe telefon) se decupează ca o imagine cu
 // object-fit: cover, deci imaginea statică (LCP, randată de același shader) și desenul live se potrivesc la orice ecran.
-import { STARS } from './journey.js?v=2026112101';
+import { SKY, skyCount } from './journey.js?v=2026112201';
 
 const RAD = Math.PI / 180;
 // ---------- Pământul și atmosfera (km) ----------
@@ -46,11 +46,10 @@ const ES1 = -DIP + SUNPATH[SUNPATH.length - 1][1] * RAD, ES2 = -58 * RAD;   // S
 export const riseH = (a) => HCAM * Math.exp(a * Math.log(50) + 19.9 * Math.pow(Math.max(0, a - 0.7), 2));
 const riseEs = (a) => ES1 + (ES2 - ES1) * smoothA(0, 0.6, a);
 function smoothA(a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
-// stelele: același desen ca stars() din journey.js, la adâncimea de la începutul drumului spre Soare (app.js pornește de aici)
-export const STAR_CZ0 = 0.55 / 0.09;
 // raza Soarelui (pixeli CSS) în cadrul intro-ului, pe un ecran W × H (pentru preluare și pentru rezerva fără WebGL)
 // unde stă Soarele (pixeli CSS) la sfârșitul urcării
 export const introSunEnd = (W, H, mobile) => { const F = REF[mobile ? 'm' : 'd'], s = Math.max(W / F.W, H / F.H); return [W / 2, H / 2 + (F.ey - 0.5) * F.H * s]; };
+export const introF = (W, H, mobile) => { const F = REF[mobile ? 'm' : 'd']; return F.f * Math.max(W / F.W, H / F.H); };
 export const introSunR = (W, H, mobile) => { const F = REF[mobile ? 'm' : 'd']; return SUNR * F.f * Math.max(W / F.W, H / F.H); };
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -142,7 +141,7 @@ uniform mat3 uGeo;             // lume → coordonatele Pământului (x: 0°/0°
 uniform vec3 uGlow;            // culoarea strălucirii (transmisia până la Soare × cât din disc se vede)
 uniform vec2 uSunPx;           // poziția Soarelui pe ecran (pixeli), pentru strălucire
 uniform float uExpo, uLights, uStars, uTime, uDisk, uFlat;   // uFlat: turtirea discului prin refracție, lângă limb
-uniform sampler2D uLutS, uLutT, uDay, uCloud, uNight, uNightG, uStarT;
+uniform sampler2D uLutS, uLutT, uDay, uCloud, uNight, uNightG;
 uniform vec2 uNightSz;
 uniform float uHasG, uShade;   // harta globală a luminilor a sosit · umbra de peste intro (ca vechiul .shade)
 uniform vec4 uNightBox;        // regiunea hărții luminilor: lon0, lon1, lat0, lat1 (grade)
@@ -221,13 +220,30 @@ void main() {
   m = pow(m, vec3(1.0 / 2.2));
   m = mix(m, m * m * (3.0 - 2.0 * m), 0.35);                 // puțin contrast: negru mai adânc, dunga mai vie
   m = m * uShade + vec3(8.0, 5.0, 10.0) / 255.0 * (1.0 - uShade);   // umbra de peste apus (fostul .shade, 16%)
-  // stelele (aceeași textură ca la călătorie), stinse de atmosferă și ascunse de Pământ
-  float st = texelFetch(uStarT, ivec2(px), 0).r * uStars * (1.0 - cov) * dot(T, vec3(0.3, 0.5, 0.2));
-  m += st * (1.0 - m);
+  // stelele se desenează după acest pas (puncte, aceeași sferă cerească ca în călătorie)
   m += vec3(5.0, 4.0, 9.0) / 255.0 * (1.0 - m);             // fundalul paginii (#050409)
   m += (h2(px + fract(uTime) * 61.0) - 0.5) / 255.0;          // dither: fără trepte în degradeuri
   o = vec4(m, 1.0);
 }`;
+
+// stelele (PROMPT-16): aceeași sferă cerească ca în journey.js (SKY), proiectată cu baza camerei; ascunse de Pământ.
+// uQ duce direcțiile din lumea călătoriei în lumea intro-ului (la sfârșitul urcării cerul e exact cel de la începutul drumului).
+const VS_ST = `#version 300 es
+in vec3 aDir; in vec2 aSA;
+uniform mat3 uQ; uniform vec3 uRt, uUp, uFw, uCam; uniform float uF, uK; uniform vec2 uRes;
+out float vA;
+void main() {
+  vec3 d = uQ * aDir; float z = dot(d, uFw);
+  float b = dot(uCam, d), c = dot(uCam, uCam) - ${(R * R).toFixed(1)};
+  if (z < 0.2 || (b < 0.0 && b * b > c)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; vA = 0.0; return; }
+  vec2 sp = vec2(dot(d, uRt), dot(d, uUp)) * uF / z;
+  gl_Position = vec4(sp.x / (uRes.x * 0.5), sp.y / (uRes.y * 0.5), 0.0, 1.0);
+  float sz = aSA.x; gl_PointSize = max(1.0, sz); vA = aSA.y * uK * min(1.0, sz * sz);
+}`;
+const FS_ST = `#version 300 es
+precision mediump float;
+in float vA; out vec4 o;
+void main() { o = vec4(vec3(1.0, 0.945, 0.867) * vA, 1.0); }`;
 
 // ---------- pe procesor: aceleași formule, pentru culoarea strălucirii ----------
 function colDens(r, mu, H) {
@@ -260,11 +276,23 @@ export function createIntro(G, mobile) {
   const enc = '#define ENC ' + (hasF ? '0' : '1') + '\n';
   const lut = mk(FS_LUT.replace('precision highp float;', 'precision highp float;\n' + enc));
   const main = mk(FS.replace('precision highp float;', 'precision highp float;\n' + enc));
+  const stp = (() => {
+    const v = gl.createShader(gl.VERTEX_SHADER), f = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(v, VS_ST); gl.compileShader(v); gl.shaderSource(f, FS_ST); gl.compileShader(f);
+    const p = gl.createProgram(); gl.attachShader(p, v); gl.attachShader(p, f); gl.bindAttribLocation(p, 0, 'aDir'); gl.bindAttribLocation(p, 1, 'aSA'); gl.linkProgram(p);
+    return { p, f: v, U: null };
+  })();
+  const nStars = skyCount(mobile);
+  const starVao = gl.createVertexArray(), starBuf = gl.createBuffer();
+  gl.bindVertexArray(starVao); gl.bindBuffer(gl.ARRAY_BUFFER, starBuf); gl.bufferData(gl.ARRAY_BUFFER, SKY, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
+  gl.bindVertexArray(null); gl.bindBuffer(gl.ARRAY_BUFFER, null);
   let progOk = 0;   // 0 = încă se compilează · 1 = gata · -1 = nu pornește (rămâne imaginea statică)
   function progReady() {
     if (progOk) return progOk > 0;
-    if (psc && ![lut, main].every((o) => gl.getProgramParameter(o.p, psc.COMPLETION_STATUS_KHR))) return false;
-    for (const o of [lut, main]) {
+    if (psc && ![lut, main, stp].every((o) => gl.getProgramParameter(o.p, psc.COMPLETION_STATUS_KHR))) return false;
+    for (const o of [lut, main, stp]) {
       if (!gl.getProgramParameter(o.p, gl.LINK_STATUS)) { progOk = -1; console.warn('[intro] shaderul nu pornește, rămâne imaginea statică', gl.getShaderInfoLog(o.f) || gl.getProgramInfoLog(o.p)); return false; }
       o.U = {}; const n = gl.getProgramParameter(o.p, gl.ACTIVE_UNIFORMS);
       for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(o.p, i); o.U[a.name] = gl.getUniformLocation(o.p, a.name); }
@@ -301,27 +329,6 @@ export function createIntro(G, mobile) {
   let onReady = () => {};
   function ping() { if (ready()) onReady(); else if (tex.day && tex.cloud && tex.night && progOk === 0) setTimeout(ping, 50); }
   const ready = () => !!(tex.day && tex.cloud && tex.night) && !G.lost && progReady();
-  // ---------- stelele: aceleași ca în călătorie (journey.js, stars()), la adâncimea STAR_CZ0 de la începutul drumului spre Soare ----------
-  let starTex = null, starKey = '';
-  function starLayer(w, h) {
-    const k = w + 'x' + h; if (k === starKey && starTex) return; starKey = k;
-    const c2 = document.createElement('canvas'); c2.width = w; c2.height = h;
-    const c = c2.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.fillStyle = '#FFF1DD';
-    const cx = w / 2, cy = h / 2, f = Math.max(w, h) * 0.5, D = STAR_CZ0 * 0.09;
-    for (const s of STARS) {
-      let z = s.z - (D % 1); if (z <= 0.02) z += 1;
-      const x = cx + s.x / z * f * 0.35, y = cy + s.y / z * f * 0.35;
-      if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
-      const sz = (1 - z) * 1.8 + 0.4;
-      c.globalAlpha = s.b * Math.min(1, (1 - z) * 1.6 + 0.2);
-      c.fillRect(x - sz / 2, y - sz / 2, sz, sz);
-    }
-    if (!starTex) starTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, starTex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, c2);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  }
   // ---------- camera: orientată o singură dată pentru cadrul de referință (Soarele la x, limbul la y) ----------
   const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -429,7 +436,6 @@ export function createIntro(G, mobile) {
     const Lloc = [0, Math.sin(esl), Math.cos(esl)];
     const key = rc.toFixed(3) + ':' + esl.toFixed(7);
     if (key !== lutKey) { lutKey = key; drawLut(Lloc, q); }
-    starLayer(w, h);
     G.ensureSize(w, h);
     gl.useProgram(main.p); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, cv.height - h, w, h);
@@ -457,8 +463,18 @@ export function createIntro(G, mobile) {
     gl.uniform2f(U.uNightSz, nightSz[0], nightSz[1]); gl.uniform4f(U.uNightBox, NIGHT[0], NIGHT[1], NIGHT[2], NIGHT[3]);
     gl.uniform1f(U.uHasG, tex.glob ? 1 : 0);
     const bind = (u, tx, name) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, tx); gl.uniform1i(U[name], u); };
-    bind(0, lutTex[0], 'uLutS'); bind(1, lutTex[1], 'uLutT'); bind(2, tex.day, 'uDay'); bind(3, tex.cloud, 'uCloud'); bind(4, tex.night, 'uNight'); bind(5, starTex, 'uStarT'); bind(6, tex.glob || tex.night, 'uNightG');
+    bind(0, lutTex[0], 'uLutS'); bind(1, lutTex[1], 'uLutT'); bind(2, tex.day, 'uDay'); bind(3, tex.cloud, 'uCloud'); bind(4, tex.night, 'uNight'); bind(6, tex.glob || tex.night, 'uNightG');
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // stelele: puncte peste cadru, amestec „screen” (ca înainte), doar după apus
+    const kS = smooth(0.72, 1.0, p);
+    if (kS > 0 && o.sky) {
+      gl.useProgram(stp.p); const V = stp.U;
+      gl.uniformMatrix3fv(V.uQ, false, o.sky); gl.uniform3fv(V.uRt, B.Rt); gl.uniform3fv(V.uUp, B.Up); gl.uniform3fv(V.uFw, B.Fw); gl.uniform3fv(V.uCam, C);
+      gl.uniform1f(V.uF, f); gl.uniform1f(V.uK, kS); gl.uniform2f(V.uRes, w, h);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ONE);
+      gl.bindVertexArray(starVao); gl.drawArrays(gl.POINTS, 0, nStars); gl.bindVertexArray(null);
+      gl.disable(gl.BLEND);
+    }
     const al = o.alpha == null ? 1 : o.alpha;
     if (al < 1) c.globalAlpha = al;
     c.drawImage(cv, 0, 0, w, h, 0, 0, w, h);
@@ -467,6 +483,8 @@ export function createIntro(G, mobile) {
   }
   /** Mărimea Soarelui (rază, pixeli) la sfârșitul urcării, pentru preluarea de către călătorie (app.js). */
   const sunR = (w, h, kind) => { const F = REF[kind || (mobile ? 'm' : 'd')]; return SUNR * F.f * Math.max(w / F.W, h / F.H); };
+  /** Baza camerei la sfârșitul urcării (pentru ca cerul din intro să fie exact cel de la începutul drumului). */
+  const endBasis = (kind) => { const k = kind || (mobile ? 'm' : 'd'), F = REF[k]; const S = state(k, F.W, F.H, 1, 1, 0); camPrev = null; return S.B; };
   const sunF = (w, h, kind) => { const F = REF[kind || (mobile ? 'm' : 'd')]; return F.f * Math.max(w / F.W, h / F.H); };
-  return { draw, ready, loadGlobal, sunR, sunF, hooks: (f) => { onReady = f; }, info: () => ({ float: hasF, set: SET, glob: !!tex.glob }), probe: (kind, drift) => ({ B: camFor(kind), M: geoMat(drift || 0) }) };
+  return { draw, ready, loadGlobal, sunR, sunF, endBasis, hooks: (f) => { onReady = f; }, info: () => ({ float: hasF, set: SET, glob: !!tex.glob }), probe: (kind, drift) => ({ B: camFor(kind), M: geoMat(drift || 0) }) };
 }

@@ -4,7 +4,7 @@
 
 // stilurile complete (style.css) abia după primul cadru afișat: primul ecran folosește CSS-ul critic din <head>
 requestAnimationFrame(() => setTimeout(() => {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'css/style.css?v=2026112101'; document.head.appendChild(l);
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'css/style.css?v=2026112201'; document.head.appendChild(l);
 }, 0));
 
 let appP = null;
@@ -14,7 +14,7 @@ function progress(p) {
   if (arc) arc.style.strokeDashoffset = (389.6 * (1 - p)).toFixed(1);
 }
 function startApp() {
-  if (!appP) appP = import('./app.js?v=2026112101').then((a) => a.start(progress));
+  if (!appP) appP = import('./app.js?v=2026112201').then((a) => a.start(progress));
   return appP;
 }
 const lcp = document.querySelector('#apus .lcp');

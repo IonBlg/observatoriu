@@ -1,14 +1,14 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112101';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112101';
-import { createIntro, introSunR, introSunEnd, STAR_CZ0 } from './intro.js?v=2026112101';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112201';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112201';
+import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112201';
 import {
-  RM, clamp, ease, seg, lerp, fit, cover, stars, starsPan, sunGlow, drawSun, drawSunFar, drawBelt,
+  RM, clamp, ease, seg, lerp, fit, cover, drawSky, skyProject, makeDust, mixO, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112101';
+} from './journey.js?v=2026112201';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -39,10 +39,21 @@ function reveal() {
 
 // ---------- muzica: motorul se încarcă doar la primul clic ----------
 const sndBtn = document.getElementById('snd');
-let music = null, musicLoad = null, chapterNow = 'pamant';
+let music = null, musicLoad = null, chapterNow = 'intro';
 try { if (localStorage.getItem('observatoriu-muzica') === '1') { sndBtn.classList.add('armed'); sndBtn.title = 'Muzica era pornită. Apasă ca să cânte din nou.'; } } catch (e) {} // revenire: browserul cere un clic ca să cânte
+// numele piesei: un rând mic, discret, 3,5 s la fiecare schimbare (lângă buton pe calculator, sub bara de sus pe telefon)
+const trkEl = document.createElement('p'); trkEl.className = 'trk mono'; trkEl.setAttribute('aria-live', 'polite'); sndBtn.parentNode.insertBefore(trkEl, sndBtn);
+let trkT = 0;
+const showTrack = (t) => { trkEl.textContent = t; trkEl.classList.add('on'); clearTimeout(trkT); trkT = setTimeout(() => trkEl.classList.remove('on'), 3500); };
+const musicLog = [];
 sndBtn.addEventListener('click', async () => {
-  if (!music) { musicLoad = musicLoad || import('./music.js?v=2026112101').then((m) => m.init(sndBtn, chapterNow)); music = await musicLoad; }
+  // contextul audio se creează chiar în clic (iOS Safari pornește sunetul doar dintr-un gest al vizitatorului)
+  if (!music && !musicLoad) {
+    let ac = null; try { ac = new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
+    if (!ac) return;
+    musicLoad = import('./music.js?v=2026112201').then((m) => m.init(sndBtn, chapterNow, ac, { onTitle: showTrack, onSwitch: (k) => musicLog.push({ k, u: +qj.toFixed(4), qa: +qa.toFixed(3), ora: clockEl.textContent, t: +(performance.now() / 1000).toFixed(1) }) }));
+  }
+  if (!music) music = await musicLoad;
   music.toggle();
 });
 
@@ -394,6 +405,56 @@ onFirstMove(() => {
   const go = () => { if (globes()) { texIdxNow = -2; texPlan(qj); G.loadAllMic(); } }; // hărțile mici (~120 KB toate): rezerva pentru un salt direct
   'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 1500 }) : setTimeout(go, 300);
 });
+// ---------- cerul (PROMPT-16): orientările „camerei” la Soare și legătura cu cerul din intro ----------
+// La sfârșitul urcării privim cu ~100° la stânga drumului spre Mercur (oA); Soarele e acolo unde îl lasă intro-ul. Apropierea
+// rotește încet camera până când Soarele ajunge în partea lui (oH); întoarcerea rotește spre începutul drumului (oL).
+// Toate stelele și Soarele se proiectează cu aceeași orientare: se mișcă împreună, ca o panoramă.
+let SKYO = null;
+const toCamM = (o) => { const cy = Math.cos(o.yaw), sy = Math.sin(o.yaw), cp = Math.cos(o.pitch), sp = Math.sin(o.pitch); return (d) => { const x1 = d[0] * cy - d[2] * sy, z1 = d[0] * sy + d[2] * cy; return [x1, d[1] * cp - z1 * sp, d[1] * sp + z1 * cp]; }; };
+const fromCam = (o, c) => { const cy = Math.cos(o.yaw), sy = Math.sin(o.yaw), cp = Math.cos(o.pitch), sp = Math.sin(o.pitch); const y = c[1] * cp + c[2] * sp, z1 = -c[1] * sp + c[2] * cp; return [c[0] * cy + z1 * sy, y, -c[0] * sy + z1 * cy]; };
+function skySetup(W, H) {
+  const mob = SET === 'm', f = intro ? intro.sunF(W, H) : introF(W, H, mob);
+  const cl = camera(segOf('leg', ACT[1].key).a + 1e-6), oL = { yaw: cl.yaw, pitch: cl.pitch };
+  const oA = { yaw: oL.yaw - 1.75, pitch: oL.pitch };
+  const se = introSunEnd(W, H, mob), v = [(se[0] - W / 2) / f, (se[1] - H / 2) / f, 1], l = Math.hypot(...v);
+  const dSun = fromCam(oA, v.map((x) => x / l));
+  const hs = PATH.home(SUN), tx = W / 2 + hs[0], ty = H / 2 + hs[1], oH = { yaw: oA.yaw, pitch: oA.pitch };
+  for (let i = 0; i < 30; i++) { const p = skyProject(dSun, oH, f, W, H); if (!p) break; oH.yaw += (p[0] - tx) / f * 0.9; oH.pitch += (p[1] - ty) / f * 0.9; }
+  // cerul din intro: direcțiile călătoriei → lumea intro-ului, prin camera de la sfârșitul urcării (aceeași imagine la preluare)
+  let Q = null;
+  if (intro) {
+    const B = intro.endBasis(), M = toCamM(oA), col = (e) => { const c = M(e); return [0, 1, 2].map((k) => B.Rt[k] * c[0] - B.Up[k] * c[1] + B.Fw[k] * c[2]); };
+    Q = new Float32Array([...col([1, 0, 0]), ...col([0, 1, 0]), ...col([0, 0, 1])]);
+  }
+  SKYO = { f, oA, oH, oL, dSun, Q, W, H };
+}
+function skyOf(cam, u) {
+  const g = cam.g;
+  if (g.type === 'approach') { const R0 = intro ? intro.sunR(innerWidth, innerHeight) : introSunR(innerWidth, innerHeight, SET === 'm'), Rh = PATH.tgt() / 2, Rc = R0 * Math.pow(Rh / R0, ease(cam.t)); return mixO(SKYO.oA, SKYO.oH, ease(clamp((Rc / Rh - 0.12) / 0.6, 0, 1))); }
+  if (g.type === 'sun') return SKYO.oH;
+  return mixO(SKYO.oH, SKYO.oL, ease(cam.t));   // turn
+}
+// ---------- praful cosmic: doar în călătorie, din apropierea de Soare încolo; fără el cu mișcare redusă ----------
+const DUST = RM ? null : makeDust(SET === 'm' ? 130 : 170), DUSTDBG = /[?&]debug=praf\b/.test(location.search);
+let dPrevU = null, dPrevP = null;
+function dustStep(c, w, h, dpr, u, cam, o) {
+  if (!DUST) return;
+  const g = cam.g, du = dPrevU == null ? 0 : u - dPrevU, s = du * TOTAL;   // vh de derulare pe cadru (cu semn)
+  let dir = null, wgt = 0;
+  if (g.type === 'approach') { dir = SKYO.dSun; wgt = 1; }
+  else if (cam.P && dPrevP) { const d = [cam.P[0] - dPrevP[0], cam.P[1] - dPrevP[1], cam.P[2] - dPrevP[2]], l = Math.hypot(...d); if (l > 1e-9) { dir = d.map((x) => x / l * Math.sign(s || 1)); wgt = g.type === 'hold' ? 0.15 : 1; } }
+  const jump = Math.abs(s) > 25 || (dPrevP && cam.P && Math.hypot(cam.P[0] - dPrevP[0], cam.P[1] - dPrevP[1], cam.P[2] - dPrevP[2]) > 30);
+  DUST.move(dir || [0, 0, 1], dir ? s * wgt : 0, jump);
+  dPrevU = u; dPrevP = cam.P ? cam.P.slice() : null;
+  const md = dir && s ? dir.map((x) => x * Math.sign(s)) : null;
+  DUST.draw(c, w, h, o, SKYO.f * dpr, dpr, md, DUSTDBG);
+  if (DUSTDBG) {   // ?debug=praf: vectorii de mișcare ai prafului (×6) și punctul spre care zburăm
+    c.save(); c.strokeStyle = '#7FE3FF'; c.lineWidth = 1.5 * dpr; c.globalAlpha = 0.9;
+    for (const [x0, y0, x1, y1] of DUST.arrows) { const dx = (x1 - x0) * 6, dy = (y1 - y0) * 6; if (Math.hypot(dx, dy) < 2) continue; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + dx, y0 + dy); c.stroke(); const a = Math.atan2(dy, dx); c.beginPath(); c.moveTo(x0 + dx, y0 + dy); c.lineTo(x0 + dx - 7 * dpr * Math.cos(a - 0.4), y0 + dy - 7 * dpr * Math.sin(a - 0.4)); c.lineTo(x0 + dx - 7 * dpr * Math.cos(a + 0.4), y0 + dy - 7 * dpr * Math.sin(a + 0.4)); c.closePath(); c.fillStyle = '#7FE3FF'; c.fill(); }
+    if (DUST.vp) { const [x, y] = DUST.vp; c.strokeStyle = '#FF5A5A'; c.lineWidth = 2 * dpr; c.beginPath(); c.arc(x, y, 12 * dpr, 0, 7); c.moveTo(x - 20 * dpr, y); c.lineTo(x + 20 * dpr, y); c.moveTo(x, y - 20 * dpr); c.lineTo(x, y + 20 * dpr); c.stroke(); }
+    c.restore();
+  }
+}
 function req() { if (!raf) raf = requestAnimationFrame(frame); }
 function frame() {
   raf = 0;
@@ -435,7 +496,8 @@ function frame() {
       // intro-ul (apus, noapte, urcare): desenat continuu (Pământul „curge”); peste călătorie în timpul preluării
       if (drawJ && kI < 1) dirty = true;
       else if (live) {
-        if (intro.draw(c, w, h, pa, introT, { a: ra })) { if (!space._live) { space._live = 1; space._op = -1; } if (!RM && !document.hidden) introAnim = true; }
+        if (PATH && (!SKYO || SKYO.W !== W || SKYO.H !== H || (intro && !SKYO.Q))) skySetup(W, H);
+        if (intro.draw(c, w, h, pa, introT, { a: ra, sky: SKYO && SKYO.Q })) { if (!space._live) { space._live = 1; space._op = -1; } if (!RM && !document.hidden) introAnim = true; }
       }
     }
     panels(jPnls, u);
@@ -443,6 +505,7 @@ function frame() {
     if (drawJ && (key !== lastKey || dirty)) {
       lastKey = key; dirty = false;
       if (!PATH || PATH.W !== W || PATH.H !== H) { layoutPanels(W, H); placeAnchors(); }
+      if (!SKYO || SKYO.W !== W || SKYO.H !== H || (intro && !SKYO.Q)) skySetup(W, H);
       c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; // micșorare curată, fără zimți
       const dpr = w / W, cam = camera(u);
       distCheck(u, cam);
@@ -459,24 +522,24 @@ function frame() {
         // SOARELE, o oprire ca planetele: de departe un disc alb cu strălucire (exact cât era la sfârșitul urcării), care crește
         // și alunecă în partea lui; de aproape globul live (SDO); apoi camera trece pe lângă el și pornește spre Mercur
         const hs = PATH.home(SUN), Rh = PATH.tgt() / 2 * (cam.g.type === 'sun' ? 1 + 0.05 * cam.t : cam.g.type === 'turn' ? 1.05 : 1);
+        const so = skyOf(cam, u), fS = SKYO.f * dpr;   // aceeași sferă cerească: orientarea „camerei” la Soare
+        drawSky(c, w, h, so, fS, 1, SET === 'm');
         if (cam.g.type === 'approach') {
           const g = ease(cam.t), R0 = intro ? intro.sunR(W, H) : introSunR(W, H, SET === 'm');
-          const Rc = R0 * Math.pow(Rh / R0, g), kk = ease(clamp((Rc / Rh - 0.12) / 0.6, 0, 1)), se = introSunEnd(W, H, SET === 'm');
-          stars(c, w, h, STAR_CZ0 + 5 * g, 1);   // mergem înainte: stelele se depărtează de centru, ca în restul drumului
-          drawSunFar(c, lerp(se[0], W / 2 + hs[0], kk) * dpr, lerp(se[1], H / 2 + hs[1], kk) * dpr, Rc * dpr, R0 * dpr, Rc, sunDraw, intro ? intro.sunF(W, H) * dpr : Math.min(W, H) * dpr);
+          const Rc = R0 * Math.pow(Rh / R0, g), sp = skyProject(SKYO.dSun, so, SKYO.f, W, H) || [W / 2, H / 2];
+          drawSunFar(c, sp[0] * dpr, sp[1] * dpr, Rc * dpr, R0 * dpr, Rc, sunDraw, SKYO.f * dpr);
         } else {
-          const R = Rh * dpr, cx = (W / 2 + hs[0]) * dpr, cy = (H / 2 + hs[1]) * dpr;
-          if (cam.scene === 'sun') { stars(c, w, h, STAR_CZ0 + 5, 1); drawSun(c, cx, cy, R, 1, sunDraw); }
+          const R = Rh * dpr, sp = skyProject(SKYO.dSun, so, SKYO.f, W, H);
+          if (cam.scene === 'sun') { if (sp) drawSun(c, sp[0] * dpr, sp[1] * dpr, R, 1, sunDraw); }
           else {
-            const p = ease(cam.t), spd = RM ? 0 : Math.sin(Math.PI * cam.t);
-            starsPan(c, w, h, p * 0.9, spd, 1 - ease(seg(cam.t, 0.7, 1)));
-            stars(c, w, h, 0, ease(seg(cam.t, 0.7, 1)));
-            drawSun(c, cx - p * (w * 0.55 + R * 1.6), cy, R, 1 - ease(seg(cam.t, 0.45, 0.9)), sunDraw);
+            // întoarcerea spre Mercur: cerul și Soarele se rotesc împreună (aceeași proiecție); Soarele iese prin stânga
+            if (sp) drawSun(c, sp[0] * dpr, sp[1] * dpr, R, 1 - ease(seg(cam.t, 0.55, 0.95)), sunDraw);
             sunGlow(c, w, h, 0.22 * ease(seg(cam.t, 0.5, 1)));
           }
         }
+        dustStep(c, w, h, dpr, u, cam, so);
       } else {
-        stars(c, w, h, cam.P[2], 1, -cam.yaw * PATH.f * dpr, -cam.pitch * PATH.f * dpr); // rotirea camerei mută cerul
+        drawSky(c, w, h, cam, SKYO.f * dpr, 1, SET === 'm');   // stelele: doar orientarea camerei (infinit de departe)
         sunGlow(c, w, h, 0.22 * 14 / (14 + cam.P[2]));
         const list = BODY.map((B) => ({ B, p: project(B, cam) })).filter((o) => o.p).sort((p, q) => q.p.dist - p.p.dist);
         for (const { B, p } of list) {
@@ -506,9 +569,10 @@ function frame() {
           if (!r && (!G || G.lost)) { const im = staticOf(B.key), S = Dpx / (2 * B.fr); if (im) { c.globalAlpha = alpha; c.drawImage(im, sx - S / 2, sy - S / 2, S, S); c.globalAlpha = 1; } }
         }
         if (PATH.belt.length) drawBelt(c, cam, w, h, dpr, u);
+        dustStep(c, w, h, dpr, u, cam, cam);
       }
     }
-    if (drawJ && live && kI > 0 && kI < 1) { if (intro.draw(c, w, h, pa, introT, { a: ra, alpha: kI })) introAnim = true; }
+    if (drawJ && live && kI > 0 && kI < 1) { if (intro.draw(c, w, h, pa, introT, { a: ra, alpha: kI, sky: SKYO && SKYO.Q })) introAnim = true; }
     loupeUpdate(u);
     const jr = jSec.getBoundingClientRect();
     hudUpdate(u, jr.top <= 1 && jr.bottom >= H - 1 && u > 0.01);
@@ -540,7 +604,7 @@ function frame() {
     sheetList.querySelectorAll('a').forEach((a) => { if (a.dataset.sec === cur) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current'); });
   }
   const ms = ACT.find((s) => s.key === cur);
-  chapterNow = cur === 'apus' ? 'pamant' : cur === 'final' ? ACT[ACT.length - 1].music : ms ? ms.music : 'pamant';
+  chapterNow = cur === 'apus' ? 'intro' : cur === 'final' || cur === 'program' ? 'neptun' : ms ? ms.music : 'intro';
   if (music) music.chapter(chapterNow);
   // un glob e pe ecran: rotația merge continuu, deci desenăm și cadrul următor (nu se oprește niciodată)
   if (introAnim && revealed) { introT += dt; spinLast = now; req(); }
@@ -559,9 +623,9 @@ if (vid && 'IntersectionObserver' in window) {
 // data din titlul cardului se pune de la început (același text ca în sky.js), ca înălțimea cardului să nu se schimbe când sosește calculul
 try { document.getElementById('skyDate').textContent = ('Chișinău · ' + new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Chisinau' }) + ' · ora 21:00').toLocaleUpperCase('ro-RO'); } catch (e) {}
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112101').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112201').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else askSky();
-if (DEBUG) window.__obs = { stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
+if (DEBUG) window.__obs = { musicLog, music: () => music, skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
 
 // ---------- cuvinte singure pe rând ----------

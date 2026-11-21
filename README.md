@@ -25,6 +25,8 @@ Un planetariu **fictiv** și o seară întreagă pe o singură pagină. Derulare
   
   Totul rulează într-un singur context WebGL, compus într-un canvas 2D.
 - **Apusul de început, randat live** (`js/intro.js`): camera stă la 400 km deasupra Mării Chinei de Est și privește spre Shanghai. Atmosfera e calculată cu împrăștiere simplă Rayleigh + Mie și absorbția ozonului, într-o tabelă mică (192 × 512) recalculată doar când Soarele se mișcă. Pământul folosește Blue Marble (ziua, norii) și Black Marble 2016 (luminile orașelor, decupaj regional la ~1 km pe pixel). Soarele e tăiat de Pământ, se înroșește și se turtește prin atmosferă; după apus apar luminile orașelor și aceleași stele ca în restul drumului. Primul cadru e o imagine statică (15 KB) randată de același shader, ca LCP; WebGL o preia fără salt. După apus camera urcă (până la ~120.000 km): Pământul devine un glob întunecat, cu inelul de atmosferă luminat din spate, Soarele reapare de după el, apoi drumul continuă spre Soare în aceeași scenă (un singur canvas, o singură secțiune fixată), fără ocular. Soarele se rotește (harta SDO pe sferă, fără întunecarea spre margine din imagine).
+- **Cerul:** stelele stau pe o sferă cerească (4.700 de direcții fixe) și se proiectează doar cu orientarea camerei: pe zborul drept stau pe loc, la întoarceri se rotesc toate împreună. Peste ele, un strat discret de „praf cosmic” în spațiul 3D din jurul camerei, vizibil doar în mișcare, fuge din punctul spre care zburăm.
+- **Muzica** (doar după clic pe „Muzică”, 0 KB la deschidere): câte un fragment de 70–105 s pe capitol, în buclă fără cusătură, schimbat lin la derulare. Holst, *Planetele* (U.S. Air Force Band și U.S. Marine Band, domeniu public), Grieg, „Dimineața”, și Satie, *Gymnopédie nr. 1* (Musopen, domeniu public), Debussy, *Clair de lune* (eldüendesüarez, CC BY-SA 4.0). Opus/WebM, cu AAC ca rezervă.
 - **Încărcare treptată:** la pornire, doar imaginea statică a apusului; după afișare, cele trei hărți ale intro-ului. Hărțile planetelor vin abia după prima derulare, în ordinea drumului: corpul curent, următorul, cel de după. Cele rămase în urmă se eliberează din memoria GPU. Telefoanele primesc hărți mai mici.
 - **Accesibilitate:** navigare din tastatură, focus vizibil, contrast de cel puțin 4,5:1 pentru texte, mod pentru mișcare redusă și rezervă statică fără WebGL.
 - **Cifrele** (cache golit; măsurate local cu gzip, ca pe Cloudflare):
@@ -48,8 +50,9 @@ js/journey.js       drumul: camera, stelele, asteroizii, opririle
 js/globe.js         randarea WebGL2 a sferelor (shaderul) și contextul WebGL comun
 js/intro.js         apusul orbital: atmosfera, Pământul, Soarele, stelele (în același context)
 js/frames.js        setul de mărimi (telefon / calculator) și prima derulare
+js/music.js         muzica: fragmentele audio, bucla, estomparea între capitole
 js/vendor/          Astronomy Engine (MIT)
-media/              hărți (tex/), imagini statice (static/), video (d/ calculator, m/ telefon)
+media/              hărți (tex/), imagini statice (static/), muzică (audio/), video (d/ calculator, m/ telefon)
 _headers            cache lung pentru /media/* și /fonts/*, fără cache pentru HTML (Cloudflare Pages)
 ```
 
@@ -70,6 +73,10 @@ Ca să-l rulezi local, pornește orice server static din folderul proiectului, d
 | Saturn, Uranus, Neptun | [Hubble OPAL](https://doi.org/10.17909/T9G593) (NASA/ESA/STScI, programul OPAL, PI A. Simon) | CC BY 4.0 |
 | Inelele lui Saturn | [Voyager 2 PPS](https://pds-rings.seti.org/) (NASA PDS Rings Node) și [Cassini PIA08389](https://photojournal.jpl.nasa.gov/catalog/PIA08389) | domeniu public |
 | Stelele căzătoare de la final | video [ESO/Gianluca Lombardi](https://www.eso.org/public/videos/Geminidstimelapse4/) (glphoto.it) | CC BY 4.0 |
+| Muzica: Holst, *Planetele* (Mercur, Venus, Marte, Jupiter, Uranus) | U.S. Air Force Heritage of America Band, 1998, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Holst_The_Planets_Jupiter.ogg) | domeniu public |
+| Muzica: Holst, *Planetele* (Saturn, Neptun) | „The President's Own” U.S. Marine Band, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:HOLST_%22The_Planets%2C_Op._32_5._Saturn%2C_the_Bringer_of_Old_Age%22_-_%22The_President%27s_Own%22_U.S._Marine_Band.opus) | domeniu public |
+| Muzica: Grieg, „Dimineața”; Satie, *Gymnopédie nr. 1* | Musopen Symphony Orchestra; Robin Alciatore (Musopen), [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Musopen_-_Morning.ogg) | domeniu public |
+| Muzica: Debussy, *Clair de lune* | eldüendesüarez, pian, 2023, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Debussy_-_Clair_de_lune.%28Piano_Performance_by_eld%C3%BCendes%C3%BCarez%29.wav) | CC BY-SA 4.0 (fragmentul folosit, la fel) |
 | Calculele astronomice | [Astronomy Engine](https://github.com/cosinekitty/astronomy) (Don Cross) | MIT |
 | Fonturile | [Instrument Serif](https://github.com/Instrument/instrument-serif), [Geist și Geist Mono](https://github.com/vercel/geist-font) | SIL OFL 1.1 |
 
