@@ -1,6 +1,6 @@
 // Călătoria: scena 3D (STOPS), camera, regulile trecerii și desenarea (Soare, planete, inele, asteroizi, stele, Luna).
 // Copiată din previzualizare (V10), doar împărțită pe fișiere.
-import { dims } from './frames.js?v=2026112201';
+import { dims } from './frames.js?v=2026112202';
 
 export const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -132,17 +132,17 @@ export function makeDust(n) {
 export const STOPS = [
 // PROMPT-11: Luna e o oprire ca celelalte (fără coborârea spre Tycho); cele 4,6 ecrane pe care le avea în plus s-au împărțit
 // proporțional între celelalte opriri (× 1,146), deci lungimea drumului și ceasul (21:00 → 02:00) rămân aceleași.
-  { key: 'soare',   name: 'Soarele', dot: '#FFD9A0', D: 109.2, au: 0,     x: 0,   y: 0,    weight: 3.44, music: 'soare' },
-  { key: 'mercur',  name: 'Mercur',  dot: '#CFCAC4', D: 0.383, au: 0.387, x: 1.0, y: 0.12, weight: 3.78, music: 'mercur', fr: 0.45 },
-  { key: 'venus',   name: 'Venus',   dot: '#EAD9B0', D: 0.949, au: 0.723, x: 1.4, y: 0.12, weight: 3.44, music: 'venus', fr: 0.45 },
-  { key: 'pamant',  name: 'Pământ',  dot: '#9DB8FF', D: 1,     au: 1,     x: 1.4, y: 0.10, weight: 3.21, music: 'pamant', fr: 0.4215 },
+  { key: 'soare',   name: 'Soarele', dot: '#FFD9A0', D: 109.2, au: 0,     x: 0,   y: 0,    weight: 3.44 },
+  { key: 'mercur',  name: 'Mercur',  dot: '#CFCAC4', D: 0.383, au: 0.387, x: 1.0, y: 0.12, weight: 3.78, fr: 0.45 },
+  { key: 'venus',   name: 'Venus',   dot: '#EAD9B0', D: 0.949, au: 0.723, x: 1.4, y: 0.12, weight: 3.44, fr: 0.45 },
+  { key: 'pamant',  name: 'Pământ',  dot: '#9DB8FF', D: 1,     au: 1,     x: 1.4, y: 0.10, weight: 3.21, fr: 0.4215 },
   // Luna: lângă Pământ, puțin mai departe pe drum și spre interior (dx, dy, dz față de Pământ); 6 panouri
-  { key: 'luna',    name: 'Luna',    dot: '#E8E2D8', D: 0.273, au: 1,     of: 'pamant', dx: 0.8, dy: 0.05, dz: 2.6, weight: 6.0, leg: 1.6, music: 'luna', fr: 0.5 },
-  { key: 'marte',   name: 'Marte',   dot: '#E08A5A', D: 0.532, au: 1.524, x: 1.2, y: 0.12, weight: 4.58, music: 'marte', fr: 0.45 },
-  { key: 'jupiter', name: 'Jupiter', dot: '#E3C9A8', D: 11.21, au: 5.203, x: 8.5, y: 0.6,  weight: 4.58, music: 'jupiter', fr: 0.45 },
-  { key: 'saturn',  name: 'Saturn',  dot: '#E6D3A3', D: 9.45,  au: 9.537, x: 7.5, y: 0.5,  weight: 5.04, music: 'saturn', fr: 0.205, ext: 2.33 },   // ext: inelele (marginea inelului F) / diametrul planetei
-  { key: 'uranus',  name: 'Uranus',  dot: '#B5E3E8', D: 4.01,  au: 19.19, x: 3.6, y: 0.3,  weight: 4.01, music: 'uranus', fr: 0.235 },
-  { key: 'neptun',  name: 'Neptun',  dot: '#7FA6E8', D: 3.88,  au: 30.07, x: 3.6, y: 0.3,  weight: 4.01, music: 'neptun', fr: 0.45 }
+  { key: 'luna',    name: 'Luna',    dot: '#E8E2D8', D: 0.273, au: 1,     of: 'pamant', dx: 0.8, dy: 0.05, dz: 2.6, weight: 6.0, leg: 1.6, fr: 0.5 },
+  { key: 'marte',   name: 'Marte',   dot: '#E08A5A', D: 0.532, au: 1.524, x: 1.2, y: 0.12, weight: 4.58, fr: 0.45 },
+  { key: 'jupiter', name: 'Jupiter', dot: '#E3C9A8', D: 11.21, au: 5.203, x: 8.5, y: 0.6,  weight: 4.58, fr: 0.45 },
+  { key: 'saturn',  name: 'Saturn',  dot: '#E6D3A3', D: 9.45,  au: 9.537, x: 7.5, y: 0.5,  weight: 5.04, fr: 0.205, ext: 2.33 },   // ext: inelele (marginea inelului F) / diametrul planetei
+  { key: 'uranus',  name: 'Uranus',  dot: '#B5E3E8', D: 4.01,  au: 19.19, x: 3.6, y: 0.3,  weight: 4.01, fr: 0.235 },
+  { key: 'neptun',  name: 'Neptun',  dot: '#7FA6E8', D: 3.88,  au: 30.07, x: 3.6, y: 0.3,  weight: 4.01, fr: 0.45 }
 ];
 // adâncimea: scară logaritmică comprimată (drumul Marte → Jupiter se simte de ~3 ori mai lung decât Pământ → Marte)
 export const ZK = 26, ZA = 0.3, zOf = (au) => ZK * Math.log(1 + au / ZA);
@@ -294,7 +294,7 @@ export function camera(u) {
   }
   return C(pos, o);
 }
-// oprirea „curentă” (cuprins, contor, muzică, credite)
+// oprirea „curentă” (cuprins, contor, credite)
 export function stopAt(u) {
   const g = segAt(u);
   if (g.type === 'leg') return seg(u, g.a, g.b) < 0.5 && g.from ? g.from : g.to;

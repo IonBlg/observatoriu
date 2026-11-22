@@ -100,19 +100,12 @@ body.locked{overflow:hidden}
 @media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}.pnl.a1,.pnl.a2{top:44vh!important;bottom:auto!important}.pnl.a3{top:auto!important;bottom:12vh!important}.pnl.a4{top:14vh!important}} /* telefon: creditele sunt în subsol (Surse imagini); textele din apus stau jos, sub Soare */
 @media (max-width:760px){#calatorie .pnl:not(.glass):not(article):not([data-seg])::before{inset:-14vh -48vw}}
 @media (prefers-reduced-motion:reduce){.btn,.sq,.chap a span,.chap a em{transition:none}}
-/* muzica: butonul din bara de sus */
-.snd{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.6);background:rgba(5,4,9,.18);color:#fff;font:500 14px 'Geist',system-ui,sans-serif;cursor:pointer;transition:background .3s,border-color .3s,color .3s}
-.snd svg{width:20px;height:20px;flex:none}
-.snd .on-i{display:none}.snd[aria-pressed="true"] .on-i{display:inline}.snd[aria-pressed="true"] .off-i{display:none}
-.snd:hover{background:rgba(255,241,221,.14)}
-.snd[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)} /* rămâne contur: singurul buton plin din bară e „Rezervă” */
-.snd.armed{border-color:var(--gold)}
-.snd:focus-visible,.nav a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.nav a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .nav a.rez{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;background:var(--gold);color:#140E12;font-size:15px;font-weight:500;text-shadow:none;transition:background .3s}
 .nav a.rez:hover{background:#FFD9A8}
 /* contorul de călătorie */
-.hud{position:fixed;right:clamp(16px,3vw,40px);bottom:24px;z-index:24;display:grid;gap:5px;min-width:270px;padding:12px 16px;background:rgba(10,8,14,.8);border:1px solid rgba(255,241,221,.2);border-radius:6px;opacity:0;visibility:hidden;transition:opacity .4s,visibility .4s;pointer-events:none;contain:layout paint}
-.hud.on{opacity:1;visibility:visible}
+.hud{position:fixed;right:clamp(16px,3vw,40px);bottom:24px;z-index:24;display:grid;gap:5px;min-width:270px;padding:12px 16px;background:rgba(10,8,14,.8);border:1px solid rgba(255,241,221,.2);border-radius:6px;opacity:0;visibility:hidden;translate:0 8px;transition:opacity .3s,visibility .3s,translate .3s;pointer-events:none;contain:layout paint}
+.hud.on{opacity:1;visibility:visible;translate:0 0}
 .hud.on.lupa{opacity:0;visibility:hidden}
 .hud div{display:flex;justify-content:space-between;align-items:baseline;gap:18px}
 .hud span{font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.06em;color:rgba(255,241,221,.86)}
@@ -145,7 +138,6 @@ body.locked{overflow:hidden}
 .vh{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media (max-width:760px){
   .nav{gap:10px;padding-top:12px;padding-bottom:12px}.nav-r{gap:10px!important}
-  .snd{padding:0;width:44px;height:44px;justify-content:center}.snd svg{width:22px;height:22px}.snd .t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .nav a.rez{padding:0 16px}
   .hud{top:76px;bottom:auto;right:auto;left:50%;transform:translateX(-50%);min-width:0;display:flex;gap:8px;padding:5px 12px;border-radius:999px}
   .hud span,.hud .hl,.hud .hs{display:none}
@@ -154,7 +146,7 @@ body.locked{overflow:hidden}
   .hud .hd b::before{content:'· ';opacity:.6}
   .sky{padding:20px}.sky .row{grid-template-columns:62px minmax(0,1fr) auto;gap:10px}
 }
-@media (prefers-reduced-motion:reduce){.snd,.hud,.loupe,.ltag,.chap,.pill-nav,.sheet,.sheet-bg,.cred{transition:none}}
+@media (prefers-reduced-motion:reduce){.hud,.loupe,.ltag,.chap,.pill-nav,.sheet,.sheet-bg,.cred{transition:none}}
 /* cartonașele de eveniment: un singur model, în călătorie și în program */
 .ev{display:flex;flex-direction:column;padding:22px 22px 18px;background:var(--ink);color:#140E12;border-radius:4px;text-shadow:none;box-shadow:0 22px 44px -20px rgba(0,0,0,.75)}
 .ev .ev-d{margin:0 0 10px;font:500 13px/1.4 'Geist Mono',monospace;letter-spacing:.05em;color:#7A3420}.ev .ev-d span{white-space:nowrap}
@@ -279,8 +271,3 @@ body.sheet-open{overflow:hidden}
 .loc dd{margin:2px 0 0;font-size:17px;font-weight:500}
 @media (max-width:560px){.loc dl{grid-template-columns:repeat(2,minmax(0,1fr))}.loc dl div:nth-child(3){padding-left:0;border-left:0}.loc dl div:nth-child(n+3){border-top:1px solid rgba(255,241,221,.12)}}
 
-/* PROMPT-16: numele piesei, la schimbare (3,5 s) */
-.trk{margin:0;padding:5px 10px;border-radius:5px;background:rgba(5,4,9,.78);color:#FFF1DD;font-size:12px;letter-spacing:.06em;white-space:nowrap;opacity:0;transition:opacity .45s;pointer-events:none;text-shadow:none}
-.trk.on{opacity:1}
-@media (max-width:760px){.trk{position:fixed;top:64px;right:16px}}
-@media (prefers-reduced-motion:reduce){.trk{transition:none}}

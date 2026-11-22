@@ -1,14 +1,14 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112201';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112201';
-import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112201';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112202';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112202';
+import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112202';
 import {
   RM, clamp, ease, seg, lerp, fit, cover, drawSky, skyProject, makeDust, mixO, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112201';
+} from './journey.js?v=2026112202';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -36,26 +36,6 @@ function reveal() {
   introStart();
   if (/^#program/.test(location.hash)) setTimeout(() => goProgram((location.hash.match(/ev=(\w+)/) || [])[1]), 60); // link direct spre program
 }
-
-// ---------- muzica: motorul se încarcă doar la primul clic ----------
-const sndBtn = document.getElementById('snd');
-let music = null, musicLoad = null, chapterNow = 'intro';
-try { if (localStorage.getItem('observatoriu-muzica') === '1') { sndBtn.classList.add('armed'); sndBtn.title = 'Muzica era pornită. Apasă ca să cânte din nou.'; } } catch (e) {} // revenire: browserul cere un clic ca să cânte
-// numele piesei: un rând mic, discret, 3,5 s la fiecare schimbare (lângă buton pe calculator, sub bara de sus pe telefon)
-const trkEl = document.createElement('p'); trkEl.className = 'trk mono'; trkEl.setAttribute('aria-live', 'polite'); sndBtn.parentNode.insertBefore(trkEl, sndBtn);
-let trkT = 0;
-const showTrack = (t) => { trkEl.textContent = t; trkEl.classList.add('on'); clearTimeout(trkT); trkT = setTimeout(() => trkEl.classList.remove('on'), 3500); };
-const musicLog = [];
-sndBtn.addEventListener('click', async () => {
-  // contextul audio se creează chiar în clic (iOS Safari pornește sunetul doar dintr-un gest al vizitatorului)
-  if (!music && !musicLoad) {
-    let ac = null; try { ac = new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
-    if (!ac) return;
-    musicLoad = import('./music.js?v=2026112201').then((m) => m.init(sndBtn, chapterNow, ac, { onTitle: showTrack, onSwitch: (k) => musicLog.push({ k, u: +qj.toFixed(4), qa: +qa.toFixed(3), ora: clockEl.textContent, t: +(performance.now() / 1000).toFixed(1) }) }));
-  }
-  if (!music) music = await musicLoad;
-  music.toggle();
-});
 
 // ---------- math ----------
 function prog(sec) { const b = sec.getBoundingClientRect(), span = b.height - innerHeight; return span > 0 ? clamp(-b.top / span, 0, 1) : 0; }
@@ -104,7 +84,6 @@ function* layoutSteps(W, H) {
     list.forEach((el, i) => {
       const a = A + i * (L + GAP), b = a + L;
       el.dataset.a = a.toFixed(4); el.dataset.b = b.toFixed(4); el._v = null;
-      const tm = el.querySelector('.tm'); if (tm) tm.textContent = hm(Math.round((21 * 60 + Math.max(a, 0) * 300) / 5) * 5);
     });
   }
 }
@@ -151,7 +130,9 @@ function placeAnchors() {
   jSec.querySelectorAll('.anchor').forEach((a) => {
     if (a.id === 'apus') return;
     const p = ACT.some((s) => s.key === a.id) && jPnls.find((el) => el.dataset.stop === a.id);
-    a.style.top = Math.round(xa + (p ? Math.max(0, +p.dataset.a - 0.004) : 0) * span) + 'px';
+    const ua = p ? Math.max(0, +p.dataset.a - 0.004) : 0;
+    a.style.top = Math.round(xa + ua * span) + 'px';
+    if (p) HUD_START[a.id] = ua;
   });
 }
 const hm = (m) => { m = Math.round(m) % 1440; const h = Math.floor(m / 60), mm = m % 60; return (h < 10 ? '0' : '') + h + ':' + (mm < 10 ? '0' : '') + mm; };
@@ -171,14 +152,21 @@ function lightStr(s) {
   return m + ' min ' + (t % 60) + ' s';
 }
 let hudOn = false;
+// PROMPT-17: căsuța se vede doar cât stăm la o oprire: de la începutul opririi (planeta s-a așezat în locul ei; la Soare,
+// oprirea Soarelui) până puțin înainte de plecare (ultimele 7% din oprire). Pe drum, la întoarcere și în urcare nu se vede.
+const HUD_END = 0.07;
+// începutul: oprirea, sau ancora ei din cuprins dacă e puțin mai devreme (primul panou al planetei, planeta aproape așezată),
+// ca după un salt din cuprins căsuța să apară imediat (placeAnchors completează HUD_START)
+const HUD_START = {};
+function atStop(u) {
+  const g = segAt(u);
+  if (g.type === 'hold' || g.type === 'sun') return u < g.b - HUD_END * (g.b - g.a);
+  return g.type === 'leg' && HUD_START[g.to.key] != null && u >= HUD_START[g.to.key];
+}
 function hudUpdate(u, on) {
   if (on !== hudOn) { hudOn = on; hudEl.classList.toggle('on', on); }
   if (!on) return;
-  const g = segAt(u), t = seg(u, g.a, g.b); let au = 0, dest = ACT[0];
-  if (g.type === 'leg') { au = lerp(g.from ? g.from.au : 0, g.to.au, RM ? 0 : ease(t)); dest = g.to; } // mișcare redusă: fără numărătoare
-  else if (g.type === 'tail') { au = g.from.au; dest = g.from; }
-  else if (g.type === 'turn') dest = ACT[1] || ACT[0];
-  else if (g.stop) { au = g.stop.au; dest = g.stop; } // Luna: valorile Pământului
+  const g = segAt(u), dest = g.stop || ACT[0], au = dest.au;   // valorile opririi curente (Luna: ale Pământului)
   const a = fmtKm(au * AU_KM), b = lightStr(au * AU_S), c = dest.name, d = 'Oprirea ' + (ACT.indexOf(stopAt(u)) + 1) + ' din ' + NSTOP;
   if (hStop.textContent !== d) hStop.textContent = d;
   if (hKm.textContent !== a) hKm.textContent = a;
@@ -575,7 +563,7 @@ function frame() {
     if (drawJ && live && kI > 0 && kI < 1) { if (intro.draw(c, w, h, pa, introT, { a: ra, alpha: kI, sky: SKYO && SKYO.Q })) introAnim = true; }
     loupeUpdate(u);
     const jr = jSec.getBoundingClientRect();
-    hudUpdate(u, jr.top <= 1 && jr.bottom >= H - 1 && u > 0.01);
+    hudUpdate(u, jr.top <= 1 && jr.bottom >= H - 1 && atStop(u));
     const st = stopAt(u).key, cr = (G && G.lost ? CRED[st + '_svs'] : '') || CRED[st] || '';
     if (credRender._k !== cr) { credRender._k = cr; credRenderT.innerHTML = cr; }
     credRender.style.opacity = cr && inJ ? 1 : 0;
@@ -603,9 +591,6 @@ function frame() {
     pillT.textContent = i >= 0 ? ACT[i].name : 'Final'; pillN.textContent = n + '/' + NSTOP;
     sheetList.querySelectorAll('a').forEach((a) => { if (a.dataset.sec === cur) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current'); });
   }
-  const ms = ACT.find((s) => s.key === cur);
-  chapterNow = cur === 'apus' ? 'intro' : cur === 'final' || cur === 'program' ? 'neptun' : ms ? ms.music : 'intro';
-  if (music) music.chapter(chapterNow);
   // un glob e pe ecran: rotația merge continuu, deci desenăm și cadrul următor (nu se oprește niciodată)
   if (introAnim && revealed) { introT += dt; spinLast = now; req(); }
   if (spinning && revealed && !document.hidden) { spinT += dt; spinLast = now; dirty = true; req(); }
@@ -623,9 +608,9 @@ if (vid && 'IntersectionObserver' in window) {
 // data din titlul cardului se pune de la început (același text ca în sky.js), ca înălțimea cardului să nu se schimbe când sosește calculul
 try { document.getElementById('skyDate').textContent = ('Chișinău · ' + new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Chisinau' }) + ' · ora 21:00').toLocaleUpperCase('ro-RO'); } catch (e) {}
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112201').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112202').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else askSky();
-if (DEBUG) window.__obs = { musicLog, music: () => music, skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
+if (DEBUG) window.__obs = { q: () => [qa, qj], skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
 
 // ---------- cuvinte singure pe rând ----------
