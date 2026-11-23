@@ -1,4 +1,4 @@
-# Observatoriu — o seară prin Sistemul Solar
+# Observatoriu: o seară prin Sistemul Solar
 
 **Site:** https://observatoriu1.pages.dev
 
@@ -72,6 +72,6 @@ Ca să-l rulezi local, pornește orice server static din folderul proiectului, d
 | Inelele lui Saturn | [Voyager 2 PPS](https://pds-rings.seti.org/) (NASA PDS Rings Node) și [Cassini PIA08389](https://photojournal.jpl.nasa.gov/catalog/PIA08389) | domeniu public |
 | Stelele căzătoare de la final | video [ESO/Gianluca Lombardi](https://www.eso.org/public/videos/Geminidstimelapse4/) (glphoto.it) | CC BY 4.0 |
 | Calculele astronomice | [Astronomy Engine](https://github.com/cosinekitty/astronomy) (Don Cross) | MIT |
-| Fonturile | [Instrument Serif](https://github.com/Instrument/instrument-serif), [Geist și Geist Mono](https://github.com/vercel/geist-font) | SIL OFL 1.1 |
+| Fonturile | [Bodoni Moda](https://github.com/indestructible-type/Bodoni) (titluri), [Atkinson Hyperlegible Next](https://github.com/googlefonts/atkinson-hyperlegible-next) (text și cifre); licențele în `fonts/OFL-*.txt` | SIL OFL 1.1 |
 
 **Modificări față de surse:** cadre extrase, decupate și comprimate; harta Black Marble decupată pe regiunea Chinei de Est; Soarele, planetele și Luna randate live din hărți, cu culorile corectate. Proiectul nu are nicio legătură cu NASA, ESA, ESO sau JAXA și nu e susținut de ele.

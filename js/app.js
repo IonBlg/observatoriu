@@ -1,14 +1,16 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112202';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112202';
-import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112202';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112203';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112203';
+import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112203';
+import { astro } from './astro.js?v=2026112203';
+import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112203';
 import {
   RM, clamp, ease, seg, lerp, fit, cover, drawSky, skyProject, makeDust, mixO, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112202';
+} from './journey.js?v=2026112203';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -71,6 +73,7 @@ function* layoutSteps(W, H) {
   mwEnd();
   const groups = new Map();
   jPnls.forEach((el) => {
+    if (el.hidden) return;   // un cartonaș fără eveniment (program.js) nu ocupă loc în oprire
     const d = el.dataset, k = d.leg ? 'leg:' + d.leg : d.stop + ':' + (d.part || '');
     if (d.at != null) { const B = ACT.find((s) => s.key === d.stop); if (B) d.at = B.side > 0 ? 'l' : 'r'; } // textul stă în partea opusă planetei
     if (!groups.has(k)) groups.set(k, []); groups.get(k).push(el);
@@ -93,18 +96,18 @@ const jSec = document.getElementById('calatorie'), stage = jSec.querySelector('.
 const apusPnls = [...stage.querySelectorAll('.pnl.ip')], jPnls = [...stage.querySelectorAll('.pnl:not(.ip)')];
 const credRender = document.getElementById('cred-render'), credRenderT = document.getElementById('cred-render-t');
 const CRED = {
-  pamant: 'Pământul: randat din hărțile <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble Next Generation</a> și Blue Marble: Clouds, NASA Earth Observatory · domeniu public',
-  luna: 'Luna: randată din harta <a href="https://svs.gsfc.nasa.gov/4720">CGI Moon Kit (LROC), NASA SVS</a> · domeniu public',
+  pamant: 'Pământul: randat din hărțile <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble Next Generation</a> și Blue Marble: Clouds, NASA Earth Observatory, domeniu public',
+  luna: 'Luna: randată din harta <a href="https://svs.gsfc.nasa.gov/4720">CGI Moon Kit (LROC), NASA SVS</a>, domeniu public',
   // fără WebGL se văd cadrele statice din animațiile NASA SVS
-  pamant_svs: 'Pământul: animație <a href="https://svs.gsfc.nasa.gov/">NASA\'s Scientific Visualization Studio</a> · domeniu public',
-  soare: 'Soarele: <a href="https://sdo.gsfc.nasa.gov/">NASA/SDO</a>, HMI și AIA 304, 9 mai 2024 · domeniu public',
-  saturn: 'Saturn: harta <a href="https://doi.org/10.17909/T9G593">Hubble OPAL, NASA/ESA</a> · CC BY 4.0 · inelele: NASA Voyager și Cassini',
-  uranus: 'Uranus: randat din harta <a href="https://doi.org/10.17909/T9G593">Hubble OPAL (NASA/ESA, A. Simon)</a> · CC BY 4.0',
-  neptun: 'Neptun: randat din harta <a href="https://doi.org/10.17909/T9G593">Hubble OPAL (NASA/ESA, A. Simon)</a> · CC BY 4.0',
-  jupiter: 'Jupiter: randat din harta <a href="https://photojournal.jpl.nasa.gov/catalog/PIA07782">Cassini PIA07782, NASA/JPL/SSI</a> · domeniu public',
-  venus: 'Venus: randat din imaginile <a href="https://doi.org/10.17597/isas.darts/vco-00016">Akatsuki UVI, JAXA/ISAS</a> · CC BY 4.0',
-  mercur: 'Mercur: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m">MESSENGER MDIS, NASA/JHUAPL/Carnegie</a> · domeniu public',
-  marte: 'Marte: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m">Viking MDIM 2.1, NASA/USGS</a> · domeniu public'
+  pamant_svs: 'Pământul: animație <a href="https://svs.gsfc.nasa.gov/">NASA\'s Scientific Visualization Studio</a>, domeniu public',
+  soare: 'Soarele: <a href="https://sdo.gsfc.nasa.gov/">NASA/SDO</a>, HMI și AIA 304, 9 mai 2024, domeniu public',
+  saturn: 'Saturn: harta <a href="https://doi.org/10.17909/T9G593">Hubble OPAL, NASA/ESA</a>, CC BY 4.0; inelele: NASA Voyager și Cassini',
+  uranus: 'Uranus: randat din harta <a href="https://doi.org/10.17909/T9G593">Hubble OPAL (NASA/ESA, A. Simon)</a>, CC BY 4.0',
+  neptun: 'Neptun: randat din harta <a href="https://doi.org/10.17909/T9G593">Hubble OPAL (NASA/ESA, A. Simon)</a>, CC BY 4.0',
+  jupiter: 'Jupiter: randat din harta <a href="https://photojournal.jpl.nasa.gov/catalog/PIA07782">Cassini PIA07782, NASA/JPL/SSI</a>, domeniu public',
+  venus: 'Venus: randat din imaginile <a href="https://doi.org/10.17597/isas.darts/vco-00016">Akatsuki UVI, JAXA/ISAS</a>, CC BY 4.0',
+  mercur: 'Mercur: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m">MESSENGER MDIS, NASA/JHUAPL/Carnegie</a>, domeniu public',
+  marte: 'Marte: randat din harta <a href="https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m">Viking MDIM 2.1, NASA/USGS</a>, domeniu public'
 };
 const clockEl = document.getElementById('clock'), barEl = document.getElementById('bar');
 const letters = [...document.querySelectorAll('#title .ltr')], cue = document.getElementById('cue'), titleKick = document.getElementById('titleKick');
@@ -166,8 +169,8 @@ function atStop(u) {
 function hudUpdate(u, on) {
   if (on !== hudOn) { hudOn = on; hudEl.classList.toggle('on', on); }
   if (!on) return;
-  const g = segAt(u), dest = g.stop || ACT[0], au = dest.au;   // valorile opririi curente (Luna: ale Pământului)
-  const a = fmtKm(au * AU_KM), b = lightStr(au * AU_S), c = dest.name, d = 'Oprirea ' + (ACT.indexOf(stopAt(u)) + 1) + ' din ' + NSTOP;
+  const g = segAt(u), dest = g.stop || g.to || ACT[0], au = dest.au;   // valorile opririi curente (Luna: ale Pământului); pe ultimii pași ai drumului, ale opririi spre care mergem
+  const a = fmtKm(au * AU_KM), b = lightStr(au * AU_S), c = dest.name, d = 'Oprirea ' + (Math.max(ACT.indexOf(dest), ACT.indexOf(stopAt(u))) + 1) + ' din ' + NSTOP;
   if (hStop.textContent !== d) hStop.textContent = d;
   if (hKm.textContent !== a) hKm.textContent = a;
   if (hLight.textContent !== b) hLight.textContent = b;
@@ -180,12 +183,12 @@ function hudUpdate(u, on) {
 const LOUPE = { Z: 3, R: 90 };
 // r = raza zonei, în raze de disc (unde eticheta e activă)
 const ZONES = [
-  { lat: -43.31, lon: -11.36, r: 0.064, n: 'TYCHO', d: '85 km lățime, ~108 milioane de ani. Razele lui luminoase se întind pe până la 1.500 km.' },
-  { lat: 9.62, lon: -20.08, r: 0.071, n: 'COPERNICUS', d: '93 km lățime, ~800 de milioane de ani. Se vede și cu un binoclu.' },
-  { lat: 32.8, lon: -15.6, r: 0.23, n: 'MARE IMBRIUM · MAREA PLOILOR', d: 'O câmpie de lavă de ~1.120 km, într-un bazin lăsat de un impact uriaș.' },
-  { lat: 28.0, lon: 17.5, r: 0.16, n: 'MARE SERENITATIS · MAREA SENINĂTĂȚII', d: '~700 km. La marginea ei de sud-est a aselenizat Apollo 17, în decembrie 1972.' },
-  { lat: 0.674, lon: 23.473, r: 0.052, n: 'APOLLO 11 · MAREA LINIȘTII', d: 'Punctul auriu: aici au coborât primii oameni pe Lună, pe 20 iulie 1969.' },
-  { lat: 8.5, lon: 31.4, r: 0.18, n: 'MARE TRANQUILLITATIS · MAREA LINIȘTII', d: '~870 km. Pe marginea ei de sud-vest a aselenizat Apollo 11, în 1969.' }
+  { lat: -43.31, lon: -11.36, r: 0.064, n: 'Tycho', d: '85 km lățime, ~108 milioane de ani. Razele lui luminoase se întind pe până la 1.500 km.' },
+  { lat: 9.62, lon: -20.08, r: 0.071, n: 'Copernicus', d: '93 km lățime, ~800 de milioane de ani. Se vede și cu un binoclu.' },
+  { lat: 32.8, lon: -15.6, r: 0.23, n: 'Mare Imbrium, Marea Ploilor', d: 'O câmpie de lavă de ~1.120 km, într-un bazin lăsat de un impact uriaș.' },
+  { lat: 28.0, lon: 17.5, r: 0.16, n: 'Mare Serenitatis, Marea Seninătății', d: '~700 km. La marginea ei de sud-est a aselenizat Apollo 17, în decembrie 1972.' },
+  { lat: 0.674, lon: 23.473, r: 0.052, n: 'Apollo 11, Marea Liniștii', d: 'Punctul auriu: aici au coborât primii oameni pe Lună, pe 20 iulie 1969.' },
+  { lat: 8.5, lon: 31.4, r: 0.18, n: 'Mare Tranquillitatis, Marea Liniștii', d: '~870 km. Pe marginea ei de sud-vest a aselenizat Apollo 11, în 1969.' }
 ];
 const APOLLO11 = ZONES[4];
 const loupeEl = document.getElementById('loupe'), loupeCv = loupeEl.querySelector('canvas'), tagEl = document.getElementById('ltag');
@@ -271,7 +274,7 @@ form.addEventListener('submit', (e) => {
   e.preventDefault(); tried = true;
   const bad = Object.keys(RULES).filter((k) => !check(k));
   if (bad.length) { RULES[bad[0]][0].focus(); return; }
-  const ev = fEv.options[fEv.selectedIndex].text.split(' · ')[0];
+  const ev = fEv.options[fEv.selectedIndex].dataset.t;
   form.hidden = true;
   okEl.textContent = glueStr('Mulțumim, ' + fName.value.trim() + '! Locul tău la «' + ev + '» e notat. Acesta e un site demonstrativ, deci rezervarea nu e reală.');
   againBtn.hidden = false; okEl.focus(); req();
@@ -283,28 +286,32 @@ function showForm() {
 }
 againBtn.addEventListener('click', () => { showForm(); fEv.focus(); req(); });
 // biletul: rândurile din program aleg seara; sumarul și totalul se actualizează
-const rows = [...document.querySelectorAll('.row[data-pick]')], tkE = document.getElementById('tkE'), tkT = document.getElementById('tkT'), goBtn = document.getElementById('goBtn'), fN = document.getElementById('f-n');
+const rowsAll = () => [...document.querySelectorAll('.row[data-pick]')], tkE = document.getElementById('tkE'), tkT = document.getElementById('tkT'), goBtn = document.getElementById('goBtn'), fN = document.getElementById('f-n');
 function syncTicket() {
   const o = fEv.options[fEv.selectedIndex], v = fEv.value;
-  rows.forEach((r) => r.setAttribute('aria-pressed', String(r.dataset.pick === v)));
+  rowsAll().forEach((r) => r.setAttribute('aria-pressed', String(r.dataset.pick === v)));
   if (!v) { tkE.textContent = 'Alege o seară din program'; tkT.textContent = ''; goBtn.textContent = 'Trimite rezervarea'; notch(); return; }
-  const parts = o.text.split(' · '), price = parseInt(parts[2], 10) || 0, n = parseInt(fN.value, 10) || 1;
-  tkE.textContent = parts[0]; tkT.textContent = (parts[1] || '').toUpperCase() + ' · ' + n + (n === 1 ? ' PERSOANĂ' : ' PERSOANE');
-  goBtn.textContent = 'Rezervă · ' + price * n + ' lei';
+  const price = parseInt(o.dataset.p, 10) || 0, n = parseInt(fN.value, 10) || 1;   // datele serii stau pe opțiune (data-t, data-w, data-p)
+  tkE.textContent = o.dataset.t; tkT.textContent = o.dataset.w + ', ' + n + (n === 1 ? ' persoană' : ' persoane');
+  goBtn.textContent = 'Rezervă: ' + price * n + ' lei';
   notch();
 }
 const rzBox = document.querySelector('.rz'), tkBox = document.getElementById('tk');
 function notch() { rzBox.style.setProperty('--ny', (tkBox.offsetTop + tkBox.offsetHeight) + 'px'); } // decupajele biletului stau fix pe linia punctată
 addEventListener('resize', notch); if (document.fonts) document.fonts.ready.then(notch); notch();
-rows.forEach((r) => r.addEventListener('click', () => {
+// rândurile vin din program.js, deci clicul se prinde pe listă
+document.querySelector('.evs').addEventListener('click', (e) => {
+  const r = e.target.closest('.row[data-pick]'); if (!r) return;
   showForm(); fEv.value = r.dataset.pick; if (tried) check('ev'); syncTicket();
   if (innerWidth < 980) { const t = document.querySelector('.rz'); scrollTo({ top: t.getBoundingClientRect().top + scrollY - 84, behavior: RM ? 'auto' : 'smooth' }); fName.focus({ preventScroll: true }); }
-}));
+});
 fEv.addEventListener('change', syncTicket); fN.addEventListener('change', syncTicket);
 form.addEventListener('reset', () => setTimeout(syncTicket, 0));
 // toate butoanele „Rezervă” duc la program; cele de la un eveniment îl aleg deja în formular
+let pendingEv = null;
 function goProgram(ev) {
   const known = ev && fEv.querySelector('option[value="' + ev + '"]');
+  if (ev && !known && !progDone) { pendingEv = ev; askProgram(); }   // programul încă se calculează: alegerea se face după
   if (known) { showForm(); fEv.value = ev; if (tried) check('ev'); syncTicket(); }
   const target = known ? document.querySelector('.rz') : progSec;
   scrollTo(0, Math.max(0, target.getBoundingClientRect().top + scrollY - 84));
@@ -318,7 +325,7 @@ document.addEventListener('click', (e) => {
 });
 // lista opririlor (telefon): panou de jos, focusul rămâne în el, Esc sau clic în afară îl închide
 sheetList.innerHTML = ACT.map((s, i) => '<li><a href="#' + s.key + '" data-sec="' + s.key + '"><span class="k">' + (i + 1) + '</span>' + s.name + '<i></i></a></li>').join('')
-  + '<li><a href="#final" data-sec="final"><span class="k">' + NSTOP + '</span>Final · stele căzătoare<i></i></a></li>';
+  + '<li><a href="#final" data-sec="final"><span class="k">' + NSTOP + '</span>Final<i></i></a></li>';
 let sheetOpen = false;
 const focusables = () => [...sheet.querySelectorAll('a,button')];
 function openSheet() {
@@ -606,10 +613,29 @@ if (vid && 'IntersectionObserver' in window) {
 } else if (vid) setVid();
 // cerul din seara asta: sky.js (și astronomy-engine) abia când finalul e aproape
 // data din titlul cardului se pune de la început (același text ca în sky.js), ca înălțimea cardului să nu se schimbe când sosește calculul
-try { document.getElementById('skyDate').textContent = ('Chișinău · ' + new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Chisinau' }) + ' · ora 21:00').toLocaleUpperCase('ro-RO'); } catch (e) {}
+try { document.getElementById('skyDate').textContent = 'Chișinău, ' + new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Chisinau' }) + ', ora 21:00'; } catch (e) {}
+// ---------- programul: calculat din data de azi (program.js), după prima derulare; Astronomy Engine se încarcă atunci ----------
+let progP = null, progDone = false;
+function askProgram() {
+  if (!progP) progP = astro().then(async (A) => {
+    const evs = computeProgram(A, progToday());
+    const moved = renderProgram(evs); progDone = true;
+    syncTicket();
+    if (pendingEv) { const ev = pendingEv; pendingEv = null; goProgram(ev); }
+    if (moved) { await steps(layoutSteps(innerWidth, innerHeight)); placeAnchors(); dirty = true; req(); }   // planeta serii s-a mutat la oprirea ei
+    if (DEBUG) window.__prog = evs;
+  }).catch((e) => {
+    const l = document.querySelector('.evs'); l.removeAttribute('aria-busy');
+    l.innerHTML = '<li class="nojs">Programul nu s-a putut calcula. Reîncarcă pagina.</li>';
+    if (DEBUG) console.warn(e);
+  });
+  return progP;
+}
+onFirstMove(askProgram);
+if (/^#program/.test(location.hash)) askProgram();
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112202').then((m) => m.loadAstronomy()).catch(() => {}); };
-if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else askSky();
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112203').then((m) => m.loadAstronomy()).catch(() => {}); };
+if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); askProgram(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else { askSky(); askProgram(); }
 if (DEBUG) window.__obs = { q: () => [qa, qj], skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
 

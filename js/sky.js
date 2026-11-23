@@ -1,14 +1,11 @@
 // Cerul din seara asta (Chișinău, ora 21:00), cu astronomy-engine. Se încarcă după ecranul de încărcare.
+import { astro } from './astro.js?v=2026112203';
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 // ---------- calcule astronomice: astronomy-engine, încărcată local după ecranul de încărcare ----------
 const AU = 149597870.7, C_KM_S = 299792.458;
 let AST = null;
 export function loadAstronomy() {
-  const s = document.createElement('script');
-  s.src = 'js/vendor/astronomy.browser.min.js'; s.defer = true;
-  s.onload = () => { AST = window.Astronomy; if (!AST) return skyFail(); try { runSky(); } catch (e) { skyFail(); } };
-  s.onerror = skyFail;
-  document.head.appendChild(s);
+  astro().then((A) => { AST = A; try { runSky(); } catch (e) { skyFail(); } }).catch(skyFail);
 }
 // ---------- 1. cerul din seara asta (Chișinău, ora 21:00) ----------
 const TZ = 'Europe/Chisinau';
@@ -38,17 +35,17 @@ function skyFail() {
 }
 function runSky() {
   const A = AST, obs = new A.Observer(47.0105, 28.8638, 85), t = chisinauAt(21);
-  document.getElementById('skyDate').textContent = ('Chișinău · ' + t.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ }) + ' · ora 21:00').toLocaleUpperCase('ro-RO');
+  document.getElementById('skyDate').textContent = 'Chișinău, ' + t.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ }) + ', ora 21:00';
   const deg = A.MoonPhase(t), ill = A.Illumination(A.Body.Moon, t).phase_fraction;
   document.getElementById('phaseName').textContent = phaseName(deg); drawPhase(deg);
   const rise = A.SearchRiseSet(A.Body.Moon, obs, +1, chisinauAt(0), 1);
   const hm2 = (d) => d.date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-  document.getElementById('phaseInfo').textContent = Math.round(ill * 100) + '% luminată · ' + (rise ? 'răsare la ' + hm2(rise) : 'azi nu răsare');
+  document.getElementById('phaseInfo').textContent = Math.round(ill * 100) + '% luminată, ' + (rise ? 'răsare la ' + hm2(rise) : 'azi nu răsare');
   const list = [['Luna', A.Body.Moon], ['Mercur', A.Body.Mercury], ['Venus', A.Body.Venus], ['Marte', A.Body.Mars], ['Jupiter', A.Body.Jupiter], ['Saturn', A.Body.Saturn]];
   document.getElementById('planetRows').innerHTML = list.map(([n, b]) => {
     const eq = A.Equator(b, t, obs, true, true), h = A.Horizon(t, obs, eq.ra, eq.dec, 'normal');
     const alt = h.altitude, up = alt > 5, w = up ? clamp(alt / 90 * 100, 0, 100) : 0; // sub 5° nu se vede practic (clădiri, ceață)
     const dir = ['N', 'NE', 'E', 'SE', 'S', 'SV', 'V', 'NV'][Math.round(h.azimuth / 45) % 8];
-    return '<div class="row"><span>' + n + '</span><div class="alt" aria-hidden="true"><i style="width:' + w.toFixed(0) + '%"></i></div><span class="pill' + (up ? ' ok' : '') + '">' + (up ? 'vizibil · ' + dir + ' · ' + alt.toFixed(0) + '°' : 'sub orizont') + '</span></div>';
+    return '<div class="row"><span>' + n + '</span><div class="alt" aria-hidden="true"><i style="width:' + w.toFixed(0) + '%"></i></div><span class="pill' + (up ? ' ok' : '') + '">' + (up ? 'vizibil, ' + dir + ', ' + alt.toFixed(0) + '°' : 'sub orizont') + '</span></div>';
   }).join('');
 }
