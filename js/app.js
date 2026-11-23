@@ -1,16 +1,17 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112203';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112203';
-import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112203';
-import { astro } from './astro.js?v=2026112203';
-import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112203';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112319';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112319';
+import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112319';
+import { astro } from './astro.js?v=2026112319';
+import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112319';
+import { balance, fitTitle, restore } from './titluri.js?v=2026112319';
 import {
   RM, clamp, ease, seg, lerp, fit, cover, drawSky, skyProject, makeDust, mixO, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112203';
+} from './journey.js?v=2026112319';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -26,7 +27,8 @@ export function start(progress) {
   if (!startP) startP = (async () => {
     await steps(layoutSteps(innerWidth, innerHeight)); if (progress) progress(0.95);
     placeAnchors(); ready = true; dirty = true;
-    await cssReady(); reveal();
+    await cssReady(); await steps(placeSteps(innerWidth, innerHeight)); reveal();
+    if (document.fonts) { document.fonts.ready.then(() => placeTexts()); document.fonts.addEventListener('loadingdone', () => placeTexts()); }
   })();
   return startP;
 }
@@ -88,6 +90,100 @@ function* layoutSteps(W, H) {
       const a = A + i * (L + GAP), b = a + L;
       el.dataset.a = a.toFixed(4); el.dataset.b = b.toFixed(4); el._v = null;
     });
+  }
+}
+
+// ---------- PROMPT-19: titlurile și citatele încap, cu rânduri echilibrate ----------
+// Lățimea panoului de text = locul liber dintre cuprins (sau marginea din dreapta) și planetă, pe toată durata în care
+// panoul se vede (planeta, cu inele la Saturn, + max(32 px, 2,5% din lățime)); titlul are cel mult 11 em pe rând.
+// Mărimea titlului: clamp(36 px, 4,4vw, 72 px) pe calculator, clamp(32 px, 9,4vw, 38 px) pe telefon, micșorată doar
+// cât trebuie ca cel mai lung grup .l să încapă. Telefon: textele stau la 24 px de margini.
+const TBASE = (W) => W <= 760 ? clamp(0.094 * W, 32, 38) : clamp(0.044 * W, 36, 72), TEM = 11;
+// band = [sus, jos] al panoului (cu mișcarea lui): contează doar ce e la nivelul textului; null = toată înălțimea
+function freeWidth(pn, side, W, H, x0, xr, band) {
+  const a = +pn.dataset.a, b = +pn.dataset.b, f = Math.min(0.012, (b - a) / 4) || 0.01, G = Math.max(32, 0.025 * W);
+  let lim = side === 'l' ? W - 24 : 24;
+  // jumătatea de lățime a unui disc (rx, ry) la nivelul benzii; null = nu atinge banda
+  const half = (y, rx, ry) => { if (!band) return rx; const t = band[0] - G, bt = band[1] + G; if (y + ry < t || y - ry > bt) return null; const dy = Math.max(0, t - y, y - bt); return rx * Math.sqrt(Math.max(0, 1 - (dy / ry) ** 2)); };
+  for (let i = 0; i <= 8; i++) {
+    const u = a + f + (b - a - 2 * f) * i / 8, cam = camera(u), ds = [];
+    const add = (x, y, rx, ry) => { const hw = half(y, rx, ry); if (hw != null) ds.push([x, hw]); };
+    if (cam.scene === 'space') { for (const B of BODY) { const p = project(B, cam); if (!p || p.D < 20 || p.alpha < 0.05) continue; add(p.sx, p.sy, p.D / 2, p.D / 2); if (B.ext) add(p.sx, p.sy, p.D / 2 * B.ext, p.D / 2 * B.ext * 0.5); } }   // inelele: elipsa (înclinare 26,7°, cu rezervă)
+    else if (SKYO) { const sp = skyProject(SKYO.dSun, skyOf(cam, u), SKYO.f, W, H), R = PATH.tgt() / 2 * 1.05; if (sp) add(sp[0], sp[1], R, R); }
+    for (const [x, hw] of ds) {
+      if (x + hw < 0 || x - hw > W) continue;
+      if (side === 'l' && x > x0) lim = Math.min(lim, x - hw - G);
+      if (side === 'r' && x < xr) lim = Math.max(lim, x + hw + G);
+    }
+  }
+  return side === 'l' ? lim - x0 : xr - lim;
+}
+function* placeSteps(W, H) {
+  if (!PATH || PATH.W !== W || PATH.H !== H) return;
+  if (!SKYO || SKYO.W !== W || SKYO.H !== H) skySetup(W, H);
+  const mob = W <= 760, base = TBASE(W), x0 = Math.max(160, 0.09 * W), xr = W - clamp(0.06 * W, 16, 96);
+  for (const pn of [...apusPnls, ...jPnls]) {
+    if (pn.hidden || pn.classList.contains('glass')) continue;
+    if (pn.__st == null) pn.__st = [pn.style.width, pn.style.maxWidth];
+    const card = pn.classList.contains('card') && pn.querySelector('h3');
+    if (card) {   // cartonașul: cel mult 330 px, cât e loc până la planetă (la Saturn, până la inele)
+      if (!mob && pn.dataset.at) { pn.style.width = ''; pn.style.width = Math.round(clamp(freeWidth(pn, pn.dataset.at, W, H, x0, xr), 240, 330)) + 'px'; }
+      restore(card); balance(card, card.clientWidth, mob ? 3 : 2, 0.62); yield; continue;
+    }
+    const big = pn.querySelector(':scope > .big'), qs = [...pn.querySelectorAll(':scope > p.ser')];
+    if (!big && !qs.length) continue;
+    const side = !mob && pn.dataset.at;
+    pn.style.width = pn.__st[0]; pn.style.maxWidth = pn.__st[1];
+    const left = pn.getBoundingClientRect().left;
+    let avail = mob ? W - 48 : side ? freeWidth(pn, side, W, H, x0, xr) : W - 24 - left;
+    avail = Math.max(avail, 200);
+    const subs = [...pn.querySelectorAll(':scope > .lead, :scope > .hint')];
+    const lay = (av) => {
+      subs.forEach((e) => { e.style.maxWidth = ''; });
+      if (big) {
+        fitTitle(big, av, base, mob ? 3 : 2, mob ? Infinity : TEM);
+        if (!mob) { pn.style.width = Math.round(Math.min(av, TEM * parseFloat(big.style.fontSize))) + 'px'; pn.style.maxWidth = 'none'; }
+      }
+      for (const q of qs) {
+        restore(q);
+        const nat = parseFloat(pn.__st[1]) || parseFloat(pn.__st[0]) || q.clientWidth, box = Math.min(nat, av);
+        if (side) { pn.style.width = Math.round(box) + 'px'; pn.style.maxWidth = 'none'; }
+        balance(q, box, 8, 0.85);
+      }
+    };
+    lay(avail);
+    if (side) {   // a doua trecere: doar planetele de la nivelul textului (o Lună mică mai jos nu mai îngustează titlul)
+      const d = () => parseFloat((pn.style.translate || '0 0').split(' ')[1]) || 0;
+      const bandOf = (els) => { const rs = els.map((e) => e.getBoundingClientRect()); return [Math.min(...rs.map((r) => r.top)) - d() - 30, Math.max(...rs.map((r) => r.bottom)) - d() + 30]; };
+      const head = big ? [big] : [pn], fw = (els) => Math.max(200, freeWidth(pn, side, W, H, x0, xr, bandOf(els)));
+      const av1 = fw(head);
+      if (av1 > avail + 4) {   // un titlu mai mare e și mai înalt: se strânge până când încape la nivelul lui
+        let av = av1, ok = false;
+        for (let k = 0; k < 4 && !ok; k++) { lay(av); const a2 = fw(head); if (a2 >= av - 1) ok = true; else av = a2 - 2; }
+        if (!ok) lay(avail);
+      }
+      // paragraful (și indicația) sub titlu: lățimea lui, după locul de la nivelul lui (la Saturn coboară spre inele)
+      if (big && subs.length) for (let k = 0; k < 3; k++) {
+        const avL = fw(subs), cur = subs[0].getBoundingClientRect().width;
+        if (avL >= cur - 1) break;
+        subs.forEach((e) => { e.style.maxWidth = Math.round(avL) + 'px'; });
+      }
+    }
+    yield;
+  }
+}
+function placeTexts() { for (const _ of placeSteps(innerWidth, innerHeight)); placeFinal(); dirty = true; req(); }
+// finalul: titlurile care curg cu pagina (cerul din seara asta, programul, biletul); se refac și când li se schimbă textul
+const FIN = '#h-sky, .sky .pn, #h-prog, .evs .row .tt, #h-form, .tk-e, #h-final';
+let finMO = null, finRaf = 0;
+function placeFinal() {
+  if (finMO) finMO.disconnect();
+  const mob = innerWidth <= 760;
+  document.querySelectorAll(FIN).forEach((el) => { if (!el.getClientRects().length || !el.textContent.trim()) return; restore(el); balance(el, el.clientWidth, mob ? 3 : 2, el.matches('.tt') ? 0.66 : 0.8); });
+  if ('MutationObserver' in window) {
+    if (!finMO) finMO = new MutationObserver(() => { cancelAnimationFrame(finRaf); finRaf = requestAnimationFrame(placeFinal); });
+    finMO.takeRecords();
+    finMO.observe(document.getElementById('final'), { childList: true, characterData: true, subtree: true });
   }
 }
 
@@ -250,7 +346,7 @@ function loupeUpdate(u) {
 }
 
 // ---------- 5. rezervarea: programul, formularul (nu trimite nimic nicăieri), lista opririlor pe telefon ----------
-const glueStr = (t) => { t = t.replace(/(^|\s)([a-zăâîșțA-ZĂÂÎȘȚ0-9]{1,2}) (?=\S)/g, '$1$2 '); const k = t.trimEnd().lastIndexOf(' '); return k > 0 ? t.slice(0, k) + ' ' + t.slice(k + 1) : t; };
+const glueStr = (t) => { t = t.replace(/(^|\s)([a-zăâîșțA-ZĂÂÎȘȚ0-9]{1,2}|[Cc]el|[Cc]ea|[Mm]ai) (?=\S)/g, '$1$2 '); const k = t.trimEnd().lastIndexOf(' '); return k > 0 && !/[\u00A0\u202F]/.test(t.slice(k + 1).trim()) ? t.slice(0, k) + ' ' + t.slice(k + 1) : t; };
 const form = document.getElementById('rez'), fEv = document.getElementById('f-ev'), fName = document.getElementById('f-nume'), fTel = document.getElementById('f-tel');
 const okEl = document.getElementById('rezOk'), againBtn = document.getElementById('rezAgain'), progH = document.getElementById('h-prog');
 const RULES = {
@@ -499,7 +595,7 @@ function frame() {
     const key = u.toFixed(5) + ':' + W + 'x' + H;
     if (drawJ && (key !== lastKey || dirty)) {
       lastKey = key; dirty = false;
-      if (!PATH || PATH.W !== W || PATH.H !== H) { layoutPanels(W, H); placeAnchors(); }
+      if (!PATH || PATH.W !== W || PATH.H !== H) { layoutPanels(W, H); placeAnchors(); placeTexts(); }
       if (!SKYO || SKYO.W !== W || SKYO.H !== H || (intro && !SKYO.Q)) skySetup(W, H);
       c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; // micșorare curată, fără zimți
       const dpr = w / W, cam = camera(u);
@@ -603,7 +699,7 @@ function frame() {
   if (spinning && revealed && !document.hidden) { spinT += dt; spinLast = now; dirty = true; req(); }
 }
 addEventListener('scroll', () => { if (revealed) req(); }, { passive: true });
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { dirty = true; layoutPanels(innerWidth, innerHeight); placeAnchors(); req(); }, 150); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { dirty = true; layoutPanels(innerWidth, innerHeight); placeAnchors(); placeTexts(); }, 150); });
 // video-ul de la final: sursa și posterul se pun abia când finalul e aproape; pornește doar când se vede
 const setVid = () => { if (!vid.src) { vid.poster = BASE + 'meteori-poster.webp'; vid.src = BASE + 'meteori.mp4'; } };
 if (vid && 'IntersectionObserver' in window) {
@@ -623,6 +719,7 @@ function askProgram() {
     syncTicket();
     if (pendingEv) { const ev = pendingEv; pendingEv = null; goProgram(ev); }
     if (moved) { await steps(layoutSteps(innerWidth, innerHeight)); placeAnchors(); dirty = true; req(); }   // planeta serii s-a mutat la oprirea ei
+    placeTexts();   // titlurile cartonașelor s-au schimbat
     if (DEBUG) window.__prog = evs;
   }).catch((e) => {
     const l = document.querySelector('.evs'); l.removeAttribute('aria-busy');
@@ -634,9 +731,9 @@ function askProgram() {
 onFirstMove(askProgram);
 if (/^#program/.test(location.hash)) askProgram();
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112203').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112319').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); askProgram(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else { askSky(); askProgram(); }
-if (DEBUG) window.__obs = { q: () => [qa, qj], skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); dirty = true; req(); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
+if (DEBUG) window.__obs = { q: () => [qa, qj], skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); placeTexts(); }, fw: (pn, band) => { const W = innerWidth, H = innerHeight; return freeWidth(pn, pn.dataset.at, W, H, Math.max(160, 0.09 * W), W - clamp(0.06 * W, 16, 96), band); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
 
 // ---------- cuvinte singure pe rând ----------
@@ -644,9 +741,10 @@ req();
   function glue(el){
     var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null), nodes=[], n;
     while((n=w.nextNode())) nodes.push(n);
-    nodes.forEach(function(t){ t.nodeValue=t.nodeValue.replace(/(^|\s)([a-zăâîșțA-ZĂÂÎȘȚ0-9]{1,2}) (?=\S)/g,'$1$2\u00A0'); });
+    nodes.forEach(function(t){ t.nodeValue=t.nodeValue.replace(/(^|\s)([a-zăâîșțA-ZĂÂÎȘȚ0-9]{1,2}|[Cc]el|[Cc]ea|[Mm]ai) (?=\S)/g,'$1$2\u00A0'); });
+    // ultimul cuvânt se lipește de cel dinainte, doar dacă nu e deja lipit de ceva (de pe, „4.800 km”): altfel ar ieși un grup de 3 cuvinte
     for(var i=nodes.length-1;i>=0;i--){ var v=nodes[i].nodeValue, k=v.trimEnd().lastIndexOf(' ');
-      if(k>0){ nodes[i].nodeValue=v.slice(0,k)+'\u00A0'+v.slice(k+1); break; }
+      if(k>0){ if(!/[\u00A0\u202F]/.test(v.slice(k+1).trim())) nodes[i].nodeValue=v.slice(0,k)+'\u00A0'+v.slice(k+1); break; }
       if(v.trim()) break; }
   }
   document.querySelectorAll('h1:not([aria-label]),h2,h3,.quote,.lead,.pnl p,.pnl li,.ev p,#program p,footer p,footer li,.sky p').forEach(glue);

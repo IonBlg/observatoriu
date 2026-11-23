@@ -34,12 +34,12 @@ a{color:var(--gold);text-decoration:none}a:hover{color:#fff}
 #calatorie .pnl.card[data-at="r"]{right:clamp(16px,9vw,160px)}
 #calatorie .pnl[data-at="r"]:not(.glass):not(.card){text-align:right}
 #calatorie .pnl[data-at="r"] .lead{margin-left:auto}
-@media (min-width:761px){#calatorie .pnl[data-at="r"][style*="bottom"]{bottom:max(14vh,184px)!important}#calatorie .pnl[data-at="l"]{left:max(160px,9vw)}#calatorie .pnl[data-at]:has(.big){max-width:min(620px,46vw)!important}} /* loc pentru cuprinsul din stânga; titlurile mari nu ajung până la planetă */
+@media (min-width:761px){#calatorie .pnl[data-at="r"][style*="bottom"]{bottom:max(14vh,200px)!important}#calatorie .pnl[data-at="l"]{left:max(160px,9vw)}} /* loc pentru cuprinsul din stânga și, jos-dreapta, pentru căsuță; lățimea panourilor de text o pune app.js (PROMPT-19): cât e loc până la planetă */
 /* telefon: planeta stă în treimea de sus, textul dedesubt (niciodată peste planetă sau sub bara de sus) */
 @media (max-width:760px){
-  #calatorie .pnl[data-at]{top:auto!important;bottom:calc(68px + env(safe-area-inset-bottom))!important;text-align:left!important} /* deasupra pastilei cu opririle */
-  #calatorie .pnl[data-at] .lead{margin-left:0;font-size:16px;margin-top:12px}
-  #calatorie .pnl[data-at] .big{font-size:40px}
+  #calatorie .pnl[data-at]{top:auto!important;bottom:calc(96px + env(safe-area-inset-bottom))!important;text-align:left!important} /* deasupra pastilei cu opririle (și cu mișcarea panoului de ±30 px) */
+  #calatorie .pnl[data-at] .lead{margin-left:0;font-size:16px}
+  #calatorie .pnl[data-at] .big{font-size:34px}
   body .pnl:has(.big){max-width:none!important}
   #calatorie .pnl[data-at] .quote{font-size:28px!important}
   #calatorie .pnl[data-at]:not(.glass):not(article)::before{inset:-3vh -48vw -4vh!important}
@@ -51,7 +51,13 @@ section.pin{position:relative}
 #calatorie .pnl:not(.glass):not(article):not([data-seg])::before{content:'';position:absolute;inset:-18vh -14vw;z-index:-1;pointer-events:none;background:radial-gradient(closest-side,rgba(6,5,9,.84),rgba(6,5,9,.72) 50%,rgba(6,5,9,.34) 78%,rgba(6,5,9,0))}
 .glass{padding:22px 24px;background:rgba(10,8,14,.78);border:1px solid rgba(255,241,221,.2);border-radius:6px;text-shadow:none}
 .kick{margin:0 0 12px;font-size:15px;font-weight:500;line-height:1.3;color:var(--gold)}
-.big{margin:0;font-size:clamp(44px,7vw,120px);line-height:.94;letter-spacing:var(--ls-t)}
+/* PROMPT-19: titlurile opririlor. Grupurile .l nu se rup; app.js (titluri.js) potrivește mărimea ca cel mai lung grup să
+   încapă și alege rupturile (1–2 rânduri pe calculator, cel mult 3 pe telefon). line-height 1,1: virgula lui ș/ț (−0,31 em)
+   și literele înalte de pe rândul următor (0,75 em) nu se ating. Spațiul până la paragraf: 0,6 em (≥ 0,5 em măsurat de la codițe). */
+.big{margin:0 0 .6em;font-size:clamp(36px,4.4vw,72px);line-height:1.1;letter-spacing:0}
+.big:last-child{margin-bottom:0}
+.big .l{white-space:nowrap}
+.big + .lead{margin-top:0}
 .facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;font-size:15px;line-height:1.4;font-variant-numeric:tabular-nums}
 .facts span:nth-child(odd){opacity:.86}
 .btn{display:inline-flex;align-items:center;min-height:48px;padding:0 24px;border-radius:6px;font-size:15px;transition:background .3s,transform .3s}
@@ -68,11 +74,10 @@ section.pin{position:relative}
 .cred.away{opacity:0!important} /* un text sau un cartonaș e prea aproape (sub 24 px) */
 .shade{position:absolute;inset:0;z-index:1;pointer-events:none}
 .lead{margin:18px 0 0;max-width:460px;font-size:18px;line-height:1.5;opacity:.92}
-.quote{margin:0;font-size:clamp(30px,3.6vw,54px);line-height:1.08}
+.quote{margin:0;font-size:clamp(30px,3.6vw,54px);line-height:1.14;letter-spacing:0}
 /* fără cuvinte singure pe un rând */
 h1,h2,h3,.big,.quote,.kick{text-wrap:balance}
 p,.lead,li{text-wrap:pretty}
-.pnl:has(.big){max-width:min(880px,62vw)!important}
 .anchor{position:absolute;left:0;top:0;width:1px;height:1px}
 .load{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:var(--bg);transition:opacity .9s ease,visibility .9s}
 .load.out{opacity:0;visibility:hidden}
@@ -86,7 +91,7 @@ p,.lead,li{text-wrap:pretty}
 body.locked{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.load .orb{transition:none}}
 @media (max-width:760px){.pnl{left:16px!important;right:16px!important;width:auto!important;max-width:none!important;margin-left:0!important}.chap,.hide-sm,.cred{display:none!important}.pnl.a1,.pnl.a2{top:44vh!important;bottom:auto!important}.pnl.a3{top:auto!important;bottom:12vh!important}.pnl.a4{top:14vh!important}} /* telefon: creditele sunt în subsol (Surse imagini); textele din apus stau jos, sub Soare */
-@media (max-width:760px){#calatorie .pnl:not(.glass):not(article):not([data-seg])::before{inset:-14vh -48vw}}
+@media (max-width:760px){#calatorie .pnl:not(.glass):not(article):not([data-seg])::before{inset:-14vh -48vw}#calatorie .pnl:not(.glass):not(.card){left:24px!important;right:24px!important}} /* textele cu fontul titlurilor: cel puțin 24 px până la margine */
 @media (prefers-reduced-motion:reduce){.btn,.chap a span,.chap a em{transition:none}}
 .nav a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .nav a.rez{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:6px;background:var(--gold);color:#140E12;font-size:15px;font-weight:500;text-shadow:none;transition:background .3s}
@@ -115,7 +120,7 @@ body.locked{overflow:hidden}
 .sky{max-width:520px;margin:0 0 20px;padding:24px 26px;background:rgba(10,8,14,.8);border:1px solid rgba(255,241,221,.2);border-radius:6px}
 .sky .ph{display:flex;align-items:center;gap:18px;margin:18px 0 10px}
 .sky canvas{width:84px;height:84px;flex:none}
-.sky .pn{display:block;font-family:var(--f-t);font-size:30px;line-height:1.05}
+.sky .pn{display:block;font-family:var(--f-t);font-size:30px;line-height:1.12}
 .sky .pi{display:block;margin-top:4px;font-size:14px;opacity:.82;font-variant-numeric:tabular-nums}
 .sky .row{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,241,221,.12);font-size:14px}
 .sky .alt{height:4px;background:rgba(255,241,221,.1);border-radius:3px;overflow:hidden}
@@ -138,7 +143,7 @@ body.locked{overflow:hidden}
 /* cartonașele de eveniment: un singur model, în călătorie și în program */
 .ev{display:flex;flex-direction:column;padding:22px 22px 18px;background:var(--ink);color:#140E12;border-radius:4px;text-shadow:none;box-shadow:0 22px 44px -20px rgba(0,0,0,.75)}
 .ev .ev-d{margin:0 0 10px;font-size:15px;font-weight:500;line-height:1.4;font-variant-numeric:tabular-nums;color:#7A3420}
-.ev h3{margin:0;font-family:var(--f-t);font-weight:400;font-size:34px;line-height:1}
+.ev h3{margin:0;font-family:var(--f-t);font-weight:400;font-size:34px;line-height:1.06}
 .ev .ev-p{margin:10px 0 0;font-size:15px;line-height:1.45;opacity:1}
 .ev .ev-f{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:18px}
 .ev .ev-pr{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;color:#140E12}
@@ -155,13 +160,13 @@ body.locked{overflow:hidden}
 /* programul și formularul */
 #program{scroll-margin-top:84px;max-width:1100px;margin:72px 0 0;padding:clamp(22px,4vw,48px);background:rgba(7,6,11,.88);border:1px solid rgba(255,241,221,.16);border-radius:8px}
 #program:focus{outline:none}
-#h-prog{margin:0;font-size:clamp(52px,6vw,92px);line-height:.9;letter-spacing:var(--ls-t)}
+#h-prog{margin:0;font-size:clamp(52px,6vw,92px);line-height:1.04;letter-spacing:var(--ls-t)}
 #h-prog:focus:not(:focus-visible){outline:none}#h-prog:focus-visible{outline:2px solid var(--gold);outline-offset:8px;border-radius:4px}
 #program .sub{margin:14px 0 0;max-width:560px;font-size:17px;opacity:.9}
 .evs{list-style:none;margin:30px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
 .evs li{display:flex}.evs .ev{flex:1}
 .rz{margin-top:44px;padding-top:34px;border-top:1px solid rgba(255,241,221,.16)}
-.rz h3{margin:0;font-size:clamp(34px,3.6vw,48px);line-height:1}
+.rz h3{margin:0;font-size:clamp(34px,3.6vw,48px);line-height:1.06}
 .rz form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 22px;max-width:720px;margin-top:22px}
 .fld{display:flex;flex-direction:column;gap:7px}.fld.w2{grid-column:1/-1}
 .fld label{font-size:15px;font-weight:500}
@@ -189,7 +194,7 @@ body.locked{overflow:hidden}
 .row .dt small{font-size:14px;line-height:1.25;opacity:.86;margin-top:4px;max-width:76px}
 .row .tx{display:grid;gap:4px;min-width:0}
 .row .tm{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:rgba(255,241,221,.85)}
-.row .tt{font:400 clamp(26px,2.4vw,34px)/1.05 var(--f-t)}
+.row .tt{font:400 clamp(26px,2.4vw,34px)/1.06 var(--f-t)}
 .row .ds{font-size:15px;line-height:1.45;opacity:.82;max-width:52ch}
 .row .pr{display:grid;justify-items:end;gap:8px;font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
 .row .pr em{font-size:14px;font-weight:500;font-style:normal;padding:7px 14px;border:1px solid rgba(255,241,221,.45);border-radius:6px;transition:background .25s,color .25s,border-color .25s}
@@ -209,7 +214,9 @@ body.locked{overflow:hidden}
 .rz form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:none;margin-top:20px}
 .rz .go{justify-self:stretch;text-align:center;min-height:52px}
 @media (max-width:979px){#program{grid-template-columns:minmax(0,1fr)}.rz{position:static;-webkit-mask:none;mask:none}}
+@media (min-width:980px) and (max-width:1200px){.row{grid-template-columns:76px minmax(0,1fr)}.row .pr{grid-column:2;justify-items:start;grid-auto-flow:column;align-items:center;justify-content:space-between}} /* programul lângă bilet: prețul sub text, ca titlul serii să aibă loc pe un rând */
 @media (max-width:560px){.row{grid-template-columns:56px minmax(0,1fr);gap:14px}.row .dt b{font-size:40px}.row .pr{grid-column:2;justify-items:start;grid-auto-flow:column;align-items:center;justify-content:space-between}.rz form{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:440px){.row .tx{grid-column:1/-1;grid-row:2}.row .dt{grid-row:1}.row .pr{grid-column:2;grid-row:1}} /* telefon îngust: data și prețul sus, titlul serii pe toată lățimea (încape pe un rând) */
 /* subsolul: sursele imaginilor */
 footer details{flex-basis:100%}
 footer summary{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid rgba(255,241,221,.4);border-radius:6px;font:500 15px var(--f-x);cursor:pointer;list-style:none}
@@ -233,7 +240,7 @@ body.sheet-open{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-height:84vh;overflow:auto;overscroll-behavior:contain;padding:8px 16px calc(14px + env(safe-area-inset-bottom));background:#0F0C13;border-top:1px solid rgba(255,241,221,.22);border-radius:18px 18px 0 0;transform:translateY(102%);visibility:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),visibility .35s}
 .sheet.open{transform:none;visibility:visible;transition:transform .35s cubic-bezier(.2,.8,.2,1)} /* vizibil imediat, ca focusul să poată intra în panou */
 .sheet .sh-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 6px 4px}
-.sheet h2{margin:0;font-size:30px;line-height:1}
+.sheet h2{margin:0;font-size:30px;line-height:1.06}
 .sheet .sh-x{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,241,221,.3);background:transparent;color:var(--ink);cursor:pointer}
 .sheet ol{list-style:none;margin:6px 0 0;padding:0}
 .sheet a{display:flex;align-items:center;gap:14px;min-height:46px;padding:0 6px;border-bottom:1px solid rgba(255,241,221,.09);color:var(--ink);font-size:17px}
@@ -266,3 +273,4 @@ body.sheet-open{overflow:hidden}
 .row.wait .pr em{visibility:hidden}
 .nojs{margin:24px 0 0;max-width:560px;font-size:17px}
 @media (max-width:760px){.pnl.a3 p.ser{font-size:28px!important}} /* telefon: „Vino la apus…” pe mai puține rânduri */
+#h-final{line-height:1.04} /* „Ne vedem sub stele.”: pe două rânduri, literele nu se ating */
