@@ -1,5 +1,5 @@
 // Cerul din seara asta (Chișinău, ora 21:00), cu astronomy-engine. Se încarcă după ecranul de încărcare.
-import { astro } from './astro.js?v=2026112420';
+import { astro } from './astro.js?v=2026112421';
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 // ---------- calcule astronomice: astronomy-engine, încărcată local după ecranul de încărcare ----------
 const AU = 149597870.7, C_KM_S = 299792.458;

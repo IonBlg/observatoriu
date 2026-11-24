@@ -240,6 +240,33 @@ void main() {
   o = out_;
 }`.replace(/fe_\(0\.0\)/g, '(uFe * cos(uL0) * cos(uL0))');
 
+// ---------- placa video: verificată într-un worker, înainte de primul context ----------
+// Prima pornire WebGL pe pagină blochează firul principal 0,5–1 s (și mai mult pe calculatoare slabe) când randarea se face
+// pe procesor (SwiftShader, llvmpipe), iar scena merge apoi sacadat. Testul rulează în worker, cu OffscreenCanvas, deci nu
+// blochează pagina. Randare pe procesor → imaginile statice (aceeași rezervă ca fără WebGL). Cu placă video, totul ca înainte.
+// Nu se poate verifica (fără worker / OffscreenCanvas cu WebGL2) → ca înainte.
+let gpuP = null;
+export function gpuCheck() {
+  if (gpuP) return gpuP;
+  gpuP = new Promise((res) => {
+    if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') { res(true); return; }
+    let w = null, url = null, done = false, tm = 0;
+    const fin = (ok) => {
+      if (done) return; done = true; clearTimeout(tm);
+      try { if (w) w.terminate(); } catch (e) {}
+      if (url) URL.revokeObjectURL(url);
+      res(ok);
+    };
+    const src = "let r='';try{const g=new OffscreenCanvas(1,1).getContext('webgl2');if(!g)r='-';else{const e=g.getExtension('WEBGL_debug_renderer_info');" +
+      "r=String(e?g.getParameter(e.UNMASKED_RENDERER_WEBGL):g.getParameter(g.RENDERER));const l=g.getExtension('WEBGL_lose_context');if(l)l.loseContext();}}catch(x){r='-'}postMessage(r);";
+    try { url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' })); w = new Worker(url); } catch (e) { fin(true); return; }
+    w.onmessage = (e) => fin(e.data === '-' || !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(String(e.data)));
+    w.onerror = () => fin(true);
+    tm = setTimeout(() => fin(false), 4000);   // patru secunde doar pentru un context: randare pe procesor sau calculator foarte încărcat
+  });
+  return gpuP;
+}
+
 // ---------- contextul ----------
 export function createGlobes(mobile) {
   const cv = document.createElement('canvas'); cv.width = 16; cv.height = 16;

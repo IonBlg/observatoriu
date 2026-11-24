@@ -1,17 +1,17 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112420';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112420';
-import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112420';
-import { astro } from './astro.js?v=2026112420';
-import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112420';
-import { balance, fitTitle, restore } from './titluri.js?v=2026112420';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112421';
+import { createGlobes, gpuCheck, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112421';
+import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112421';
+import { astro } from './astro.js?v=2026112421';
+import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112421';
+import { balance, fitTitle, restore } from './titluri.js?v=2026112421';
 import {
   RM, clamp, ease, seg, lerp, fit, cover, drawSky, skyProject, makeDust, mixO, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112420';
+} from './journey.js?v=2026112421';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -460,8 +460,11 @@ let raf = 0, qa = 0, qj = 0, dirty = true, lastKey = '', curSec = '';
 // ---------- globurile live (WebGL): contextul se creează după prima derulare; hărțile: corpul curent → următorul → cel de după ----------
 let G = null, gTried = false, spinT = 0, spinLast = 0, texIdxNow = -2;
 const staticIm = {};
+// WebGL doar cu placă video (globe.js, gpuCheck): până vine răspunsul, niciun context; fără placă video, imaginile statice
+let gpuOK = null;
+const gpuP = gpuCheck().then((ok) => { gpuOK = ok; if (!ok) console.info('[globuri] randare fără placă video: imaginile statice'); return ok; });
 function globes() {
-  if (gTried) return G; gTried = true;
+  if (gTried || !gpuOK) return G; gTried = true;
   try { G = createGlobes(SET === 'm'); } catch (e) { console.warn('[globuri]', e); G = null; }
   if (G) G.hooks(() => { dirty = true; if (revealed) req(); });
   return G;
@@ -476,7 +479,7 @@ function introStart() {
     try { intro = createIntro(g, SET === 'm'); } catch (e) { console.warn('[intro]', e); intro = null; }
     if (intro) intro.hooks(() => req());
   };
-  'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 600 }) : setTimeout(go, 100);
+  gpuP.then((ok) => { if (ok) 'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 600 }) : setTimeout(go, 100); });
 }
 function staticOf(key) { // fără WebGL: un cadru static, clar
   let im = staticIm[key];
@@ -494,7 +497,7 @@ function texPlan(u) {
 onFirstMove(() => {
   if (intro) intro.loadGlobal(); else setTimeout(() => intro && intro.loadGlobal(), 3000);   // harta globală a luminilor: pentru urcare, nu la deschidere
   const go = () => { if (globes()) { texIdxNow = -2; texPlan(qj); G.loadAllMic(); } }; // hărțile mici (~120 KB toate): rezerva pentru un salt direct
-  'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 1500 }) : setTimeout(go, 300);
+  gpuP.then((ok) => { if (ok) 'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 1500 }) : setTimeout(go, 300); });
 });
 // ---------- cerul (PROMPT-16): orientările „camerei” la Soare și legătura cu cerul din intro ----------
 // La sfârșitul urcării privim cu ~100° la stânga drumului spre Mercur (oA); Soarele e acolo unde îl lasă intro-ul. Apropierea
@@ -731,7 +734,7 @@ function askProgram() {
 onFirstMove(askProgram);
 if (/^#program/.test(location.hash)) askProgram();
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112420').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112421').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); askProgram(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else { askSky(); askProgram(); }
 if (DEBUG) window.__obs = { q: () => [qa, qj], skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); placeTexts(); }, fw: (pn, band) => { const W = innerWidth, H = innerHeight; return freeWidth(pn, pn.dataset.at, W, H, Math.max(160, 0.09 * W), W - clamp(0.06 * W, 16, 96), band); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
