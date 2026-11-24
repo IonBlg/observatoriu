@@ -10,7 +10,7 @@
 // - stelele: aceeași sferă cerească ca în restul călătoriei (SKY din journey.js, puncte WebGL), apar după apus.
 // Camera „cover”: cadrul de referință (1920 × 1080 pe calculator, 1000 × 1500 pe telefon) se decupează ca o imagine cu
 // object-fit: cover, deci imaginea statică (LCP, randată de același shader) și desenul live se potrivesc la orice ecran.
-import { SKY, skyCount } from './journey.js?v=2026112319';
+import { SKY, skyCount } from './journey.js?v=2026112420';
 
 const RAD = Math.PI / 180;
 // ---------- Pământul și atmosfera (km) ----------

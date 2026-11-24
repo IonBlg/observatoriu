@@ -1,17 +1,17 @@
 // Tot ce nu ține de primul ecran: camera și desenarea călătoriei, panourile, ceasul, cuprinsul, pastila, contorul, lupa,
 // programul și biletul. Se încarcă din main.js cu import(), după primul ecran. Codul e copiat din previzualizare (V10).
 // Planetele și Luna ca glob se desenează live, din hărți, cu WebGL (globe.js); restul desenării e neschimbat.
-import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112319';
-import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112319';
-import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112319';
-import { astro } from './astro.js?v=2026112319';
-import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112319';
-import { balance, fitTitle, restore } from './titluri.js?v=2026112319';
+import { SET, BASE, stats, onFirstMove, started } from './frames.js?v=2026112420';
+import { createGlobes, angleOf, surfacePoint, BODIES, TEX_ORDER } from './globe.js?v=2026112420';
+import { createIntro, introSunR, introSunEnd, introF } from './intro.js?v=2026112420';
+import { astro } from './astro.js?v=2026112420';
+import { computeProgram, renderProgram, today as progToday } from './program.js?v=2026112420';
+import { balance, fitTitle, restore } from './titluri.js?v=2026112420';
 import {
   RM, clamp, ease, seg, lerp, fit, cover, drawSky, skyProject, makeDust, mixO, sunGlow, drawSun, drawSunFar, drawBelt,
   STOPS, ACT, SUN, BODY, SEG, TOTAL, segOf, segAt, PATH, buildPath, camera, stopAt, project,
   DEBUG, DBG, distCheck, VIS, measureWindows, mwBegin, mwRange, mwEnd, MW_N, vlen, vsub, toCam
-} from './journey.js?v=2026112319';
+} from './journey.js?v=2026112420';
 
 // ---------- pornirea: pregătim drumul în bucăți mici (între cadre), apoi dispare ecranul de încărcare ----------
 let revealed = false, ready = false, startP = null;
@@ -731,7 +731,7 @@ function askProgram() {
 onFirstMove(askProgram);
 if (/^#program/.test(location.hash)) askProgram();
 let skyAsked = false;
-const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112319').then((m) => m.loadAstronomy()).catch(() => {}); };
+const askSky = () => { if (skyAsked) return; skyAsked = true; import('./sky.js?v=2026112420').then((m) => m.loadAstronomy()).catch(() => {}); };
 if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); askSky(); askProgram(); } }, { rootMargin: '200% 0px' }); io.observe(finSec); } else { askSky(); askProgram(); }
 if (DEBUG) window.__obs = { q: () => [qa, qj], skyAt: (u) => { const cam = camera(u); return cam.scene === 'space' ? { yaw: cam.yaw, pitch: cam.pitch, P: cam.P } : Object.assign({ P: null }, skyOf(cam, u)); }, sky: () => SKYO, skyProject, stats, intro: () => intro && intro.info(), G: () => G, moon: () => moonScr, gstats: () => G && G.stats(), spin: () => spinT, relayout: () => { layoutPanels(innerWidth, innerHeight); placeTexts(); }, fw: (pn, band) => { const W = innerWidth, H = innerHeight; return freeWidth(pn, pn.dataset.at, W, H, Math.max(160, 0.09 * W), W - clamp(0.06 * W, 16, 96), band); }, camera, project, segAt, stopAt, SEG, BODY, VIS, DBG, path: () => PATH, vlen, vsub, toCam };
 req();
@@ -748,4 +748,13 @@ req();
       if(v.trim()) break; }
   }
   document.querySelectorAll('h1:not([aria-label]),h2,h3,.quote,.lead,.pnl p,.pnl li,.ev p,#program p,footer p,footer li,.sky p').forEach(glue);
+})();
+
+// ---------- „Sari la conținut”: se vede doar cu tastatura (PROMPT-20) ----------
+// CSS-ul îl arată doar la :focus-visible. Dacă a primit focus de la un Tab și omul trece apoi la rotiță, clic sau atingere,
+// focusul nu pleacă singur și linkul ar rămâne peste logo cât derulezi: îl scoatem din focus la prima mișcare a mouse-ului/degetului.
+(function(){
+  var sk = document.querySelector('.skip'); if (!sk) return;
+  var drop = function(){ if (document.activeElement === sk) sk.blur(); };
+  ['wheel', 'pointerdown', 'touchstart'].forEach(function(t){ addEventListener(t, drop, { passive: true, capture: true }); });
 })();
