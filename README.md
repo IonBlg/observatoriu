@@ -2,7 +2,7 @@
 
 **Site:** https://observatoriu.pages.dev
 
-> **In English:** a scroll-driven one-page site for a fictional planetarium. As you scroll, the evening goes from a sunset seen from orbit, up and away from Earth to the Sun, and on to past midnight, following sunlight past all eight planets and the Moon. Plain HTML, CSS and JavaScript (no framework). Everything is rendered live in WebGL2 from real NASA, ESA and JAXA maps: the opening orbital sunset (Rayleigh and Mie single scattering, Blue Marble and Black Marble maps), the Sun, the planets and the Moon. There are no image sequences. The stars sit on a fixed celestial sphere and a faint layer of cosmic dust shows the motion. Type is set in Bodoni Moda and Atkinson Hyperlegible Next. The programme of evenings is computed live from real Moon phases, meteor showers and planet altitudes. There is no music and no eyepiece any more. Assets load progressively. Lighthouse mobile scores 98 to 99 in performance and 100 in the other categories. The page opens with about 0.85 MB on desktop and 0.62 MB on phones; the full journey downloads about 14 MB and 3.3 MB, down from 300 MB and 50 MB in the first version, and it scrolls at 60 fps. The planetarium, prices and events are fictional; the astronomical data is real.
+> **In English:** a scroll-driven one-page site for a fictional planetarium. As you scroll, the evening goes from a sunset seen from orbit, up and away from Earth to the Sun, and on to past midnight, following sunlight past all eight planets and the Moon. Plain HTML, CSS and JavaScript (no framework). Everything is rendered live in WebGL2 from real NASA, ESA and JAXA maps: the opening orbital sunset (Rayleigh and Mie single scattering, Blue Marble and Black Marble maps), the Sun, the planets and the Moon. There are no image sequences. The stars sit on a fixed celestial sphere and a faint layer of cosmic dust shows the motion. Type is set in Bodoni Moda and Atkinson Hyperlegible Next. The programme of evenings is computed live from real Moon phases, meteor showers and planet altitudes. There is no music and no eyepiece any more. Assets load progressively. PageSpeed Insights (24 November 2026) scores 97 on mobile and 99 on desktop for performance, and 100 in the other categories. Google's test runs without a graphics card, so it measures the static-image version; on a device with a GPU the site is rendered live. The page opens with about 0.85 MB on desktop and 0.62 MB on phones; the full journey downloads about 14 MB and 3.3 MB, down from 300 MB and 50 MB in the first version, and it scrolls at 60 fps. The planetarium, prices and events are fictional; the astronomical data is real.
 
 ![Apusul de început, văzut de pe orbită și randat live](docs/captura.jpg)
 
@@ -31,7 +31,8 @@ Un planetariu **fictiv** și o seară întreagă pe o singură pagină. Derulare
 - **Programul calculat live** (`js/program.js`): serile vin din cer, pentru data de azi, în fusul Europe/Chisinau: Luna la primul pătrar, următoarea ploaie de stele (cu iluminarea Lunii), planeta cea mai sus pe cer la 21:00 (cu altitudinea și direcția reale), plus spectacolele de vineri și sâmbătă. Nimic în trecut, luni închis. Astronomy Engine se descarcă abia după prima derulare. Aceleași seri ajung în formular, în bilet și în cartonașele din călătorie.
 - **Fără muzică și fără ocular:** drumul e o singură scenă, de pe orbită până la Neptun, în liniște.
 - **Încărcare treptată:** la pornire, doar imaginea statică a apusului; după afișare, cele trei hărți ale intro-ului. Hărțile planetelor vin abia după prima derulare, în ordinea drumului: corpul curent, următorul, cel de după. Cele rămase în urmă se eliberează din memoria GPU. Telefoanele primesc hărți mai mici.
-- **Accesibilitate:** navigare din tastatură, focus vizibil, contrast de cel puțin 4,5:1 pentru texte, mod pentru mișcare redusă și rezervă statică fără WebGL.
+- **Fără placă video, imagini statice:** înainte de primul context WebGL, un worker verifică (cu OffscreenCanvas) dacă randarea se face pe placa video. Dacă se face pe procesor (SwiftShader, llvmpipe), WebGL nu pornește și drumul folosește imaginile statice: altfel doar pornirea WebGL ar bloca pagina 0,5–1 s, iar scena ar merge sacadat. Cu placă video, totul e randat live, ca înainte.
+- **Accesibilitate:** navigare din tastatură, focus vizibil, contrast de cel puțin 4,5:1 pentru texte, mod pentru mișcare redusă și rezervă statică fără WebGL sau fără placă video.
 - **Cifrele** (cache golit; măsurate local cu gzip, ca pe Cloudflare):
 
   | | prima versiune | acum |
@@ -39,8 +40,10 @@ Un planetariu **fictiv** și o seară întreagă pe o singură pagină. Derulare
   | la deschidere, calculator / telefon | 20 MB / 3,5 MB | **0,85 MB / 0,62 MB** |
   | tot drumul, calculator | ~300 MB | **14,0 MB** |
   | tot drumul, telefon | ~50 MB | **3,3 MB** |
-  | Lighthouse mobil (performanță / accesibilitate / bune practici / SEO) | nemăsurat | **98–99** / 100 / 100 / 100, TBT 10–20 ms, CLS 0 |
+  | Lighthouse mobil, local, cu placă video (performanță / accesibilitate / bune practici / SEO) | nemăsurat | **98–99** / 100 / 100 / 100, TBT 10–20 ms, CLS 0 |
   | derulare | nemăsurată | **60 fps** (p95 16,7 ms, și pe telefon cu procesorul încetinit de 4×) |
+
+- **PageSpeed Insights** (online, 24 noiembrie 2026, Lighthouse 13.6): telefon **97** / 100 / 100 / 100 (TBT 100 ms, CLS 0), calculator **99**. Testul Google rulează fără placă video, așa că măsoară varianta cu imagini statice; pe un dispozitiv cu placă video, site-ul e animat live. Înainte de verificarea plăcii video, același test dădea 69 pe telefon și 68 pe calculator (TBT ~19 s), pentru că WebGL pornea pe procesor.
 
 ## Structura
 
@@ -54,7 +57,7 @@ js/program.js       programul serilor, calculat live din cer
 js/sky.js           cerul din seara asta (faza Lunii, planetele vizibile)
 js/astro.js         încărcarea comună a Astronomy Engine (după prima derulare)
 js/titluri.js       așezarea titlurilor (mărimea și rupturile rândurilor)
-js/globe.js         randarea WebGL2 a sferelor (shaderul) și contextul WebGL comun
+js/globe.js         randarea WebGL2 a sferelor (shaderul), contextul WebGL comun și verificarea plăcii video
 js/intro.js         apusul orbital: atmosfera, Pământul, Soarele, stelele (în același context)
 js/frames.js        setul de mărimi (telefon / calculator) și prima derulare
 js/vendor/          Astronomy Engine (MIT)
