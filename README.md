@@ -1,6 +1,6 @@
 # Observatoriu: o seară prin Sistemul Solar
 
-**Site:** https://observatoriu1.pages.dev
+**Site:** https://observatoriu.pages.dev
 
 > **In English:** a scroll-driven one-page site for a fictional planetarium. As you scroll, the evening goes from a sunset seen from orbit, up and away from Earth to the Sun, and on to past midnight, following sunlight past all eight planets and the Moon. Plain HTML, CSS and JavaScript (no framework). Everything is rendered live in WebGL2 from real NASA, ESA and JAXA maps: the opening orbital sunset (Rayleigh and Mie single scattering, Blue Marble and Black Marble maps), the Sun, the planets and the Moon. There are no image sequences. The stars sit on a fixed celestial sphere and a faint layer of cosmic dust shows the motion. Type is set in Bodoni Moda and Atkinson Hyperlegible Next. The programme of evenings is computed live from real Moon phases, meteor showers and planet altitudes. There is no music and no eyepiece any more. Assets load progressively. Lighthouse mobile scores 98 to 99 in performance and 100 in the other categories. The page opens with about 0.85 MB on desktop and 0.62 MB on phones; the full journey downloads about 14 MB and 3.3 MB, down from 300 MB and 50 MB in the first version, and it scrolls at 60 fps. The planetarium, prices and events are fictional; the astronomical data is real.
 
